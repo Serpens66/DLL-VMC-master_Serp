@@ -111,6 +111,10 @@ CvImprovementEntry::CvImprovementEntry(void):
 	m_bAddsFreshWater(false),
 #endif
 	m_bRequiresFlatlands(false),
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+    m_bRequiresAdjacentCity(false),
+    m_bRequiresHills(false),
+#endif
 	m_bRequiresFlatlandsOrFreshWater(false),
 	m_bRequiresFeature(false),
 	m_bRequiresImprovement(false),
@@ -256,6 +260,10 @@ bool CvImprovementEntry::CacheResults(Database::Results& kResults, CvDatabaseUti
 	}
 #endif
 	m_bRequiresFlatlands = kResults.GetBool("RequiresFlatlands");
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+    m_bRequiresAdjacentCity = kResults.GetBool("RequiresAdjacentCity");
+    m_bRequiresHills = kResults.GetBool("RequiresHills");
+#endif
 	m_bRequiresFlatlandsOrFreshWater = kResults.GetBool("RequiresFlatlandsOrFreshWater");
 	m_bRequiresFeature = kResults.GetBool("RequiresFeature");
 	m_bRequiresImprovement = kResults.GetBool("RequiresImprovement");
@@ -561,6 +569,7 @@ int CvImprovementEntry::GetRequiresXAdjacentWater() const
 }
 #endif
 
+
 #if defined(MOD_GLOBAL_STACKING_RULES)
 /// Additional units that can stack in this improvement
 int CvImprovementEntry::GetAdditionalUnits() const
@@ -770,6 +779,17 @@ bool CvImprovementEntry::IsRequiresFlatlands() const
 {
 	return m_bRequiresFlatlands;
 }
+
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+bool CvImprovementEntry::IsRequiresAdjacentCity() const
+{
+	return m_bRequiresAdjacentCity;
+}
+bool CvImprovementEntry::IsRequiresHills() const
+{
+	return m_bRequiresHills;
+}
+#endif
 
 /// Requires that it must be built on something other than a hill or next to fresh water
 bool CvImprovementEntry::IsRequiresFlatlandsOrFreshWater() const

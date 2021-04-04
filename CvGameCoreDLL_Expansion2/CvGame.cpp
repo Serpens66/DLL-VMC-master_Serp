@@ -5751,7 +5751,7 @@ void CvGame::setHandicapType(HandicapTypes eHandicap)
 //	-----------------------------------------------------------------------------------------------
 PlayerTypes CvGame::getPausePlayer()
 {
-	return m_ePausePlayer;
+    return m_ePausePlayer;
 }
 
 //	-----------------------------------------------------------------------------------------------
@@ -9723,6 +9723,10 @@ void CvGame::Read(FDataStream& kStream)
 	//when loading from file, we need to reset m_lastTurnAICivsProcessed 
 	//so that updateMoves() can turn active players after loading an autosave in simultaneous turns multiplayer.
 	m_lastTurnAICivsProcessed = -1;
+#if defined(MOD_AUI_GAME_AUTOPAUSE_ON_ACTIVE_DISCONNECT_IF_NOT_SEQUENTIAL) // do not save/load the pause status, otherwise we can not unpause a game we saved during pause (or we need to put unpause code somewhere, but I think not saving this is better)
+	if(isNetworkMultiPlayer())
+        m_ePausePlayer = NO_PLAYER; // instead of removing m_ePausePlayer from wirte/read, we set it to NO_PLAYER after loading, because otherwise it would break older savegames...
+#endif
 }
 
 //	---------------------------------------------------------------------------

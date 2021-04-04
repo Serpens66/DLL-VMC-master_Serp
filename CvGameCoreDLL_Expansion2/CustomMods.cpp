@@ -557,6 +557,7 @@ int CustomMods::getOption(string sOption, int defValue) {
         MOD_OPT_CACHE(POSITIVE_STRAT_COMBAT);
         MOD_OPT_CACHE(EVENTS_PRE_SAVE_EVENT);
         MOD_OPT_CACHE(DEBUG_GAMEHOOKS);
+        MOD_OPT_CACHE(LEVEL_PROMOTIONS);
 
 		m_bInit = true;
 	}

@@ -2247,7 +2247,12 @@ bool CvPlot::canHaveImprovement(ImprovementTypes eImprovement, TeamTypes eTeam, 
 			return false;
 		}
 	}
-
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+    if(pkImprovementInfo->IsRequiresHills() && !isHills())
+	{
+		return false;
+	}
+#endif
 	ResourceTypes thisResource = getResourceType(eTeam);
 	// The functionality of this line is different in Civ 4: in that game a "Valid" Resource ALLOWS an Improvement on a Tile.  In Civ 5 this makes a Resource REQUIRE a certain Improvement
 	if(thisResource != NO_RESOURCE &&
@@ -2408,6 +2413,29 @@ bool CvPlot::canHaveImprovement(ImprovementTypes eImprovement, TeamTypes eTeam, 
 
 		if (iAdjacentWater < iRequiredAdjacentWater)
 		{
+			return false;
+		}
+	}
+#endif
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+	if (pkImprovementInfo->IsRequiresAdjacentCity())
+	{
+        bool bHasAdjacentCity = false;
+        for(iI = 0; iI < NUM_DIRECTION_TYPES; ++iI)
+		{
+			pLoopPlot = plotDirection(getX(), getY(), ((DirectionTypes)iI));
+
+			if(pLoopPlot != NULL)
+			{
+				if (pLoopPlot->isCity())
+				{
+					bHasAdjacentCity = true;
+                    break;
+				}
+			}
+		}
+        if (!bHasAdjacentCity)
+        {
 			return false;
 		}
 	}

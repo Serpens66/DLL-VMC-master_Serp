@@ -137,6 +137,7 @@ CvPlayer::CvPlayer() :
 	m_syncArchive(*this)
 #if defined(MOD_AUI_GAME_AUTOPAUSE_ON_ACTIVE_DISCONNECT_IF_NOT_SEQUENTIAL)
 	, m_bIsDisconnected("CvPlayer::m_bIsDisconnected", m_syncArchive)
+    // , m_bIsDisconnected(false)
 #endif
 	, m_iStartingX("CvPlayer::m_iStartingX", m_syncArchive)
 	, m_iStartingY("CvPlayer::m_iStartingY", m_syncArchive)
@@ -1461,7 +1462,7 @@ void CvPlayer::reset(PlayerTypes eID, bool bConstructorCall)
 #if defined(MOD_AUI_GAME_AUTOPAUSE_ON_ACTIVE_DISCONNECT_IF_NOT_SEQUENTIAL)
 bool CvPlayer::isDisconnected() const
 {
-	return m_bIsDisconnected;
+    return m_bIsDisconnected;
 }
 void CvPlayer::setIsDisconnected(bool bNewValue)
 {

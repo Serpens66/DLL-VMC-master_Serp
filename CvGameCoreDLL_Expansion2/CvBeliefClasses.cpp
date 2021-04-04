@@ -121,15 +121,22 @@ CvBeliefEntry::CvBeliefEntry() :
 /// Destructor
 CvBeliefEntry::~CvBeliefEntry()
 {
-	CvDatabaseUtility::SafeDelete2DArray(m_ppiImprovementYieldChanges);
-	CvDatabaseUtility::SafeDelete2DArray(m_ppiBuildingClassYieldChanges);
-	CvDatabaseUtility::SafeDelete2DArray(m_ppaiFeatureYieldChange);
+	if (m_ppiImprovementYieldChanges)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppiImprovementYieldChanges);
+	if (m_ppiBuildingClassYieldChanges)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppiBuildingClassYieldChanges);
+	if (m_ppaiFeatureYieldChange)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppaiFeatureYieldChange);
 #if defined(MOD_API_UNIFIED_YIELDS)
-	CvDatabaseUtility::SafeDelete2DArray(m_ppiCityYieldFromUnimprovedFeature);
-	CvDatabaseUtility::SafeDelete2DArray(m_ppiUnimprovedFeatureYieldChanges);
+	if (m_ppiCityYieldFromUnimprovedFeature)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppiCityYieldFromUnimprovedFeature);
+	if (m_ppiUnimprovedFeatureYieldChanges)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppiUnimprovedFeatureYieldChanges);
 #endif
-	CvDatabaseUtility::SafeDelete2DArray(m_ppaiResourceYieldChange);
-	CvDatabaseUtility::SafeDelete2DArray(m_ppaiTerrainYieldChange);
+	if (m_ppaiResourceYieldChange)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppaiResourceYieldChange);
+	if (m_ppaiTerrainYieldChange)
+        CvDatabaseUtility::SafeDelete2DArray(m_ppaiTerrainYieldChange);
 #if defined(MOD_API_UNIFIED_YIELDS)
 	CvDatabaseUtility::SafeDelete2DArray(m_ppiTradeRouteYieldChange);
 	CvDatabaseUtility::SafeDelete2DArray(m_ppiSpecialistYieldChange);
@@ -137,7 +144,8 @@ CvBeliefEntry::~CvBeliefEntry()
 #endif
 #if defined(MOD_RELIGION_PLOT_YIELDS)
 	if (MOD_RELIGION_PLOT_YIELDS) {
-		CvDatabaseUtility::SafeDelete2DArray(m_ppiPlotYieldChange);
+        if (m_ppiPlotYieldChange)
+            CvDatabaseUtility::SafeDelete2DArray(m_ppiPlotYieldChange);
 	}
 #endif
 }
@@ -500,7 +508,11 @@ int CvBeliefEntry::GetResourceQuantityModifier(int i) const
 /// Accessor:: Extra yield from an improvement
 int CvBeliefEntry::GetImprovementYieldChange(ImprovementTypes eIndex1, YieldTypes eIndex2) const
 {
-	CvAssertMsg(eIndex1 < GC.getNumImprovementInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (eIndex1==NO_IMPROVEMENT && eIndex2==NO_YIELD)
+        return m_ppiImprovementYieldChanges ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(eIndex1 < GC.getNumImprovementInfos(), "Index out of bounds");
 	CvAssertMsg(eIndex1 > -1, "Index out of bounds");
 	CvAssertMsg(eIndex2 < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(eIndex2 > -1, "Index out of bounds");
@@ -510,11 +522,19 @@ int CvBeliefEntry::GetImprovementYieldChange(ImprovementTypes eIndex1, YieldType
 /// Yield change for a specific BuildingClass by yield type
 int CvBeliefEntry::GetBuildingClassYieldChange(int i, int j) const
 {
-	CvAssertMsg(i < GC.getNumBuildingClassInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL && j==NULL)
+        return m_ppiBuildingClassYieldChanges ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < GC.getNumBuildingClassInfos(), "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
 	CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(j > -1, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    return m_ppiBuildingClassYieldChanges ? m_ppiBuildingClassYieldChanges[i][j] : 0; // retur 0 if NULL, not -1!
+#else
 	return m_ppiBuildingClassYieldChanges[i][j];
+#endif
 }
 
 /// Amount of extra Happiness per turn a BuildingClass provides
@@ -536,17 +556,29 @@ int CvBeliefEntry::GetBuildingClassTourism(int i) const
 /// Change to Feature yield by type
 int CvBeliefEntry::GetFeatureYieldChange(int i, int j) const
 {
-	CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL && j==NULL)
+        return m_ppaiFeatureYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
 	CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(j > -1, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    return m_ppaiFeatureYieldChange ? m_ppaiFeatureYieldChange[i][j] : 0; // retur 0 if NULL, not -1!
+#else
 	return m_ppaiFeatureYieldChange ? m_ppaiFeatureYieldChange[i][j] : -1;
+#endif
 }
 
 #if defined(MOD_API_UNIFIED_YIELDS)
 int CvBeliefEntry::GetCityYieldFromUnimprovedFeature(int i, int j) const
 {
-	CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL && j==NULL)
+        return m_ppiCityYieldFromUnimprovedFeature ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
 	CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(j > -1, "Index out of bounds");
@@ -555,7 +587,11 @@ int CvBeliefEntry::GetCityYieldFromUnimprovedFeature(int i, int j) const
 
 int CvBeliefEntry::GetUnimprovedFeatureYieldChange(int i, int j) const
 {
-	CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL && j==NULL)
+        return m_ppiUnimprovedFeatureYieldChanges ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
 	CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(j > -1, "Index out of bounds");
@@ -566,21 +602,37 @@ int CvBeliefEntry::GetUnimprovedFeatureYieldChange(int i, int j) const
 /// Change to Resource yield by type
 int CvBeliefEntry::GetResourceYieldChange(int i, int j) const
 {
-	CvAssertMsg(i < GC.getNumResourceInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL && j==NULL)
+        return m_ppaiResourceYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < GC.getNumResourceInfos(), "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
 	CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(j > -1, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    return m_ppaiResourceYieldChange ? m_ppaiResourceYieldChange[i][j] : 0; // retur 0 if NULL, not -1!
+#else
 	return m_ppaiResourceYieldChange ? m_ppaiResourceYieldChange[i][j] : -1;
+#endif
 }
 
 /// Change to yield by terrain
 int CvBeliefEntry::GetTerrainYieldChange(int i, int j) const
 {
-	CvAssertMsg(i < GC.getNumTerrainInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL && j==NULL)
+        return m_ppaiTerrainYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < GC.getNumTerrainInfos(), "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
 	CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(j > -1, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    return m_ppaiTerrainYieldChange ? m_ppaiTerrainYieldChange[i][j] : 0; // retur 0 if NULL, not -1!
+#else
 	return m_ppaiTerrainYieldChange ? m_ppaiTerrainYieldChange[i][j] : -1;
+#endif
 }
 
 #if defined(MOD_API_UNIFIED_YIELDS)
@@ -655,11 +707,19 @@ int CvBeliefEntry::GetYieldFromBarbarianKills(YieldTypes eYield) const
 int CvBeliefEntry::GetPlotYieldChange(int i, int j) const
 {
 	if (MOD_API_PLOT_YIELDS) {
-		CvAssertMsg(i < GC.getNumPlotInfos(), "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        if (i==NULL && j==NULL)
+            return m_ppiPlotYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+        CvAssertMsg(i < GC.getNumPlotInfos(), "Index out of bounds");
 		CvAssertMsg(i > -1, "Index out of bounds");
 		CvAssertMsg(j < NUM_YIELD_TYPES, "Index out of bounds");
 		CvAssertMsg(j > -1, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        return m_ppiPlotYieldChange ? m_ppiPlotYieldChange[i][j] : 0; // retur 0 if NULL, not -1!
+#else
 		return m_ppiPlotYieldChange ? m_ppiPlotYieldChange[i][j] : -1;
+#endif
 	} else {
 		return 0;
 	}
@@ -693,9 +753,17 @@ int CvBeliefEntry::GetYieldChangeTradeRoute(int i) const
 /// Yield boost from a natural wonder
 int CvBeliefEntry::GetYieldChangeNaturalWonder(int i) const
 {
-	CvAssertMsg(i < NUM_YIELD_TYPES, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL)
+        return m_piYieldChangeNaturalWonder ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
-	return m_piYieldChangeNaturalWonder ? m_piYieldChangeNaturalWonder[i] : -1;
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    return m_piYieldChangeNaturalWonder ? m_piYieldChangeNaturalWonder[i] : 0; // retur 0 if NULL, not -1!
+#else
+    return m_piYieldChangeNaturalWonder ? m_piYieldChangeNaturalWonder[i] : -1;
+#endif
 }
 
 /// Yield boost from a world wonder
@@ -709,9 +777,17 @@ int CvBeliefEntry::GetYieldChangeWorldWonder(int i) const
 /// Yield percentage boost from a natural wonder
 int CvBeliefEntry::GetYieldModifierNaturalWonder(int i) const
 {
-	CvAssertMsg(i < NUM_YIELD_TYPES, "Index out of bounds");
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (i==NULL)
+        return m_piYieldModifierNaturalWonder ? 1 : 0; // fast check if this belief does at all changes the yield this way
+#endif
+    CvAssertMsg(i < NUM_YIELD_TYPES, "Index out of bounds");
 	CvAssertMsg(i > -1, "Index out of bounds");
-	return m_piYieldModifierNaturalWonder ? m_piYieldModifierNaturalWonder[i] : -1;
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    return m_piYieldModifierNaturalWonder ? m_piYieldModifierNaturalWonder[i] : 0; // retur 0 if NULL, not -1!
+#else
+    return m_piYieldModifierNaturalWonder ? m_piYieldModifierNaturalWonder[i] : -1;
+#endif
 }
 
 /// Do we get a yield modifier 
@@ -830,7 +906,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 
 	//ImprovementYieldChanges
 	{
-		kUtility.Initialize2DArray(m_ppiImprovementYieldChanges, "Improvements", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppiImprovementYieldChanges, "Improvements", "Yields");
+#endif
 
 		std::string strKey("Belief_ImprovementYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -840,10 +918,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppiImprovementYieldChanges = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int ImprovementID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppiImprovementYieldChanges)
+            {
+                kUtility.Initialize2DArray(m_ppiImprovementYieldChanges, "Improvements", "Yields");
+                inited_m_ppiImprovementYieldChanges = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int ImprovementID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 
@@ -853,7 +941,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 
 	//BuildingClassYieldChanges
 	{
-		kUtility.Initialize2DArray(m_ppiBuildingClassYieldChanges, "BuildingClasses", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppiBuildingClassYieldChanges, "BuildingClasses", "Yields");
+#endif
 
 		std::string strKey("Belief_BuildingClassYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -863,10 +953,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppiBuildingClassYieldChanges = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int BuildingClassID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppiBuildingClassYieldChanges)
+            {
+                kUtility.Initialize2DArray(m_ppiBuildingClassYieldChanges, "BuildingClasses", "Yields");
+                inited_m_ppiBuildingClassYieldChanges = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int BuildingClassID = pResults->GetInt(0);
 			const int iYieldID = pResults->GetInt(1);
 			const int iYieldChange = pResults->GetInt(2);
 
@@ -874,9 +974,11 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 	}
 
-	//FeatureYieldChanges
+    //FeatureYieldChanges
 	{
-		kUtility.Initialize2DArray(m_ppaiFeatureYieldChange, "Features", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppaiFeatureYieldChange, "Features", "Yields");
+#endif
 
 		std::string strKey("Belief_FeatureYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -886,10 +988,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppaiFeatureYieldChange = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int FeatureID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppaiFeatureYieldChange)
+            {
+                kUtility.Initialize2DArray(m_ppaiFeatureYieldChange, "Features", "Yields");
+                inited_m_ppaiFeatureYieldChange = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int FeatureID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 
@@ -900,7 +1012,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 #if defined(MOD_API_UNIFIED_YIELDS)
 	//CityYieldFromUnimprovedFeature
 	if (MOD_API_UNIFIED_YIELDS) {
-		kUtility.Initialize2DArray(m_ppiCityYieldFromUnimprovedFeature, "Features", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppiCityYieldFromUnimprovedFeature, "Features", "Yields");
+#endif
 
 		std::string strKey("Belief_CityYieldFromUnimprovedFeature");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -910,10 +1024,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppiCityYieldFromUnimprovedFeature = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int FeatureID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppiCityYieldFromUnimprovedFeature)
+            {
+                kUtility.Initialize2DArray(m_ppiCityYieldFromUnimprovedFeature, "Features", "Yields");
+                inited_m_ppiCityYieldFromUnimprovedFeature = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int FeatureID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 
@@ -923,7 +1047,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 
 	//UnimprovedFeatureYieldChanges
 	if (MOD_API_UNIFIED_YIELDS) {
-		kUtility.Initialize2DArray(m_ppiUnimprovedFeatureYieldChanges, "Features", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppiUnimprovedFeatureYieldChanges, "Features", "Yields");
+#endif
 
 		std::string strKey("Belief_UnimprovedFeatureYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -933,10 +1059,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppiUnimprovedFeatureYieldChanges = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int FeatureID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppiUnimprovedFeatureYieldChanges)
+            {
+                kUtility.Initialize2DArray(m_ppiUnimprovedFeatureYieldChanges, "Features", "Yields");
+                inited_m_ppiUnimprovedFeatureYieldChanges = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int FeatureID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 
@@ -947,7 +1083,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 
 	//ResourceYieldChanges
 	{
-		kUtility.Initialize2DArray(m_ppaiResourceYieldChange, "Resources", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppaiResourceYieldChange, "Resources", "Yields");
+#endif
 
 		std::string strKey("Belief_ResourceYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -957,10 +1095,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppaiResourceYieldChange = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int ResourceID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppaiResourceYieldChange)
+            {
+                kUtility.Initialize2DArray(m_ppaiResourceYieldChange, "Resources", "Yields");
+                inited_m_ppaiResourceYieldChange = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int ResourceID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 
@@ -970,7 +1118,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 
 	//TerrainYieldChanges
 	{
-		kUtility.Initialize2DArray(m_ppaiTerrainYieldChange, "Terrains", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppaiTerrainYieldChange, "Terrains", "Yields");
+#endif
 
 		std::string strKey("Belief_TerrainYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -980,10 +1130,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppaiTerrainYieldChange = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int TerrainID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppaiTerrainYieldChange)
+            {
+                kUtility.Initialize2DArray(m_ppaiTerrainYieldChange, "Terrains", "Yields");
+                inited_m_ppaiTerrainYieldChange = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int TerrainID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 
@@ -1073,7 +1233,9 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 	if (MOD_RELIGION_PLOT_YIELDS)
 	//PlotYieldChanges
 	{
-		kUtility.Initialize2DArray(m_ppiPlotYieldChange, "Plots", "Yields");
+#if !defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        kUtility.Initialize2DArray(m_ppiPlotYieldChange, "Plots", "Yields");
+#endif
 
 		std::string strKey("Belief_PlotYieldChanges");
 		Database::Results* pResults = kUtility.GetResults(strKey);
@@ -1083,10 +1245,20 @@ bool CvBeliefEntry::CacheResults(Database::Results& kResults, CvDatabaseUtility&
 		}
 
 		pResults->Bind(1, szBeliefType);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+        bool inited_m_ppiPlotYieldChange = false;
+#endif
 
 		while(pResults->Step())
 		{
-			const int PlotID = pResults->GetInt(0);
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+            if (!inited_m_ppiPlotYieldChange)
+            {
+                kUtility.Initialize2DArray(m_ppiPlotYieldChange, "Plots", "Yields");
+                inited_m_ppiPlotYieldChange = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+#endif
+            const int PlotID = pResults->GetInt(0);
 			const int YieldID = pResults->GetInt(1);
 			const int yield = pResults->GetInt(2);
 

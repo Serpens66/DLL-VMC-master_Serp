@@ -1286,8 +1286,25 @@ CvGameReligions::FOUNDING_RESULT CvGameReligions::CanFoundReligion(PlayerTypes e
 					for(int iDestBelief = kReligion.m_Beliefs.GetNumBeliefs(); iDestBelief--;)
 					{
 						BeliefTypes eDestBelief = kReligion.m_Beliefs.GetBelief(iDestBelief);
+#if defined(MOD_TRAITS_ANY_BELIEF) || defined(MOD_ANY_PANTHEON)// serp: even if minimods are not enabled, we should never check a pantheon belief here, because if for whatever reason it was chosen more than once, we can not change this at this point anyway, so blocking would mean to destroy the game.
+						if(eDestBelief != NO_BELIEF && eDestBelief == eSrcBelief)
+						{
+                            if ((!MOD_TRAITS_ANY_BELIEF) || !(kPlayer.GetPlayerTraits()->IsAnyBelief())) { // if minimod is not active, or the player can not choose any belief, test if the founder/follower belief already exists. But do not test panthon.
+                                CvBeliefEntry* pBelief = GC.getBeliefInfo(eDestBelief);
+                                if(pBelief && pBelief->IsFounderBelief())
+                                {
+                                    return FOUNDING_BELIEF_IN_USE;
+                                }
+                                if(pBelief && pBelief->IsFollowerBelief())
+                                {
+                                    return FOUNDING_BELIEF_IN_USE;
+                                }
+                            }
+						}
+#else
 						if(eDestBelief != NO_BELIEF && eDestBelief == eSrcBelief)
 							return FOUNDING_BELIEF_IN_USE;
+#endif
 					}
 				}
 			}
@@ -1696,7 +1713,7 @@ bool CvGameReligions::IsInSomeReligion(BeliefTypes eBelief) const
 		if(it->m_Beliefs.HasBelief(eBelief))
 		{
 #if defined(MOD_TRAITS_ANY_BELIEF)
-			if (MOD_TRAITS_ANY_BELIEF) {
+            if (MOD_TRAITS_ANY_BELIEF) {
 				if (it->m_eFounder == ePlayer) {
 					// If it's in my religion I definitely can't have it again
 					return true;
@@ -1704,13 +1721,12 @@ bool CvGameReligions::IsInSomeReligion(BeliefTypes eBelief) const
 					// In the religion of someone else, but I can have any belief, so I can have it as well
 					continue;
 				} else if (GET_PLAYER(it->m_eFounder).GetPlayerTraits()->IsAnyBelief()) {
-					// In a religion of someone who can have any belief, so I can have it as well. Serp: No, only the one with AnyBelief can have it then! (currently other code blocks the player anyway to found that religion)
+					// In a religion of someone who can have any belief, so I can have it as well. Serp: No, only the one with AnyBelief should have it then! (currently other code blocks the player anyway to found that religion)
 					// continue;
                     return true;
 				}
 			}
 #endif
-
 			return true;
 		}
 	}
@@ -6146,7 +6162,10 @@ bool CvReligionAI::BuyAnyAvailableFaithBuilding()
 int CvReligionAI::ScoreBelief(CvBeliefEntry* pEntry)
 {
 	int iRtnValue = 5;  // Base value since everything has SOME value
-
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT) // now we check everything fast, that is otherwise checked in ScoreBeliefAtPlot. and all of it is false, we do not need to check all plots for this belief!
+    if (pEntry->GetTerrainYieldChange(NULL,NULL)==1 || pEntry->GetPlotYieldChange(NULL,NULL)==1 || pEntry->GetFeatureYieldChange(NULL,NULL)==1 || pEntry->GetYieldChangeNaturalWonder(NULL)==1 || pEntry->GetYieldModifierNaturalWonder(NULL)==1 || pEntry->GetResourceYieldChange(NULL,NULL)==1 || pEntry->GetImprovementYieldChange(NO_IMPROVEMENT,NO_YIELD)==1)
+    { // only if any of the above it true, the plots matter for the belief. if not, we can skip to loop through all plots.
+#endif
 	// Loop through each plot on map
 	int iPlotLoop;
 	CvPlot* pPlot;
@@ -6183,6 +6202,9 @@ int CvReligionAI::ScoreBelief(CvBeliefEntry* pEntry)
 			}
 		}
 	}
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    }
+#endif
 
 	// Add in value at city level
 	int iLoop;
@@ -6207,7 +6229,7 @@ int CvReligionAI::ScoreBelief(CvBeliefEntry* pEntry)
 	return iRtnValue;
 }
 
-/// AI's evaluation of this belief's usefulness at this one plot
+/// AI's evaluation of this belief's usefulness at this one plot // Serp note: if you add sth here, you should also add it to my fast heck before iterating over plots in ScoreBelief, see MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT
 int CvReligionAI::ScoreBeliefAtPlot(CvBeliefEntry* pEntry, CvPlot* pPlot)
 {
 	int iRtnValue = 0;

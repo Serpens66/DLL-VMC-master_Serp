@@ -17135,6 +17135,57 @@ void CvUnit::setExperience(int iNewValue, int iMax)
 		CvAssert(getExperience() >= 0);
 #endif
 
+#if defined(MOD_LEVEL_PROMOTIONS)
+        if (MOD_LEVEL_PROMOTIONS)
+        {
+            PromotionTypes ePromotionProm_Unlock_2 = (PromotionTypes)GC.getPROM_UNLOCK_LVL_2();
+            PromotionTypes ePromotionProm_Unlock_3 = (PromotionTypes)GC.getPROM_UNLOCK_LVL_3();
+            PromotionTypes ePromotionProm_Unlock_4 = (PromotionTypes)GC.getPROM_UNLOCK_LVL_4();
+            if (ePromotionProm_Unlock_2 != NO_PROMOTION && ePromotionProm_Unlock_3 != NO_PROMOTION && ePromotionProm_Unlock_4 != NO_PROMOTION)
+            {
+#if defined(MOD_UNITS_XP_TIMES_100)
+                if (m_iExperienceTimes100 >= 3000 && m_iExperienceTimes100 < 6000)
+#else
+                if (m_iExperience >= 30 && m_iExperience < 60)
+#endif
+                {
+                    if (!isHasPromotion(ePromotionProm_Unlock_2))
+                        setHasPromotion(ePromotionProm_Unlock_2,true);
+                }
+                
+#if defined(MOD_UNITS_XP_TIMES_100)
+                else if (m_iExperienceTimes100 >= 6000 && m_iExperienceTimes100 < 10000)
+#else
+                else if (m_iExperience >= 60 && m_iExperience < 100)
+#endif
+                {
+                    CUSTOMLOG("5");
+                    if (!isHasPromotion(ePromotionProm_Unlock_3))
+                    {
+                        setHasPromotion(ePromotionProm_Unlock_3,true);
+                        if (isHasPromotion(ePromotionProm_Unlock_2))
+                            setHasPromotion(ePromotionProm_Unlock_2,false);
+                    }
+                }
+#if defined(MOD_UNITS_XP_TIMES_100)
+                else if (m_iExperienceTimes100 >= 10000)
+#else
+                else if (m_iExperience >= 100)
+#endif
+                {
+                    if (!isHasPromotion(ePromotionProm_Unlock_4))
+                    {    
+                        setHasPromotion(ePromotionProm_Unlock_4,true);
+                        if (isHasPromotion(ePromotionProm_Unlock_2))
+                            setHasPromotion(ePromotionProm_Unlock_2,false);
+                        if (isHasPromotion(ePromotionProm_Unlock_3))
+                            setHasPromotion(ePromotionProm_Unlock_3,false);
+                    }
+                }
+            }
+        }
+#endif
+
 		if(getOwner() == GC.getGame().getActivePlayer())
 		{
 			// Don't show XP for unit that's about to bite the dust

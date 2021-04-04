@@ -218,8 +218,13 @@ bool CvDatabaseUtility::PopulateArrayByExistence(int*& pArray, const char* szTyp
 bool CvDatabaseUtility::PopulateArrayByValue(int*& pArray, const char* szTypeTableName, const char* szDataTableName, const char* szTypeColumn, const char* szFilterColumn, const char* szFilterValue, const char* szValueColumn, int iDefaultValue /* = 0 */, int iMinArraySize /* = 0 */)
 {
 	int iSize = MaxRows(szTypeTableName);
-	InitializeArray(pArray, (iSize<iMinArraySize)?iMinArraySize:iSize, iDefaultValue);
-
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (strcmp(szDataTableName,"Belief_YieldChangeNaturalWonder")!=0 && strcmp(szDataTableName,"Belief_YieldModifierNaturalWonder")!=0) // only not for these, cause we add NULL checks for them
+        InitializeArray(pArray, (iSize<iMinArraySize)?iMinArraySize:iSize, iDefaultValue);
+#else
+    InitializeArray(pArray, (iSize<iMinArraySize)?iMinArraySize:iSize, iDefaultValue);
+#endif
+    
 	std::string strKey = "_PABV_";
 	strKey.append(szTypeTableName);
 	strKey.append(szDataTableName);
@@ -241,12 +246,42 @@ bool CvDatabaseUtility::PopulateArrayByValue(int*& pArray, const char* szTypeTab
 		CvAssertMsg(false, GetErrorMessage());
 		return false;
 	}
-	while(pResults->Step())
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    bool inited_pArray = false;
+#endif
+	
+#if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
+    if (strcmp(szDataTableName,"Belief_YieldChangeNaturalWonder")==0 || strcmp(szDataTableName,"Belief_YieldModifierNaturalWonder")==0) // dont do this if check within the while loop, would be too inefficient
+    {
+        while(pResults->Step())
+        {
+            if (!inited_pArray)
+            {
+                InitializeArray(pArray, (iSize<iMinArraySize)?iMinArraySize:iSize, iDefaultValue);
+                inited_pArray = true; // only init this array, if the belief has any yieldchanges! otherwise let it be NULL, so everyone can fast check it!
+            }
+            const int idx = pResults->GetInt(0);
+            const int value = pResults->GetInt(1);
+            pArray[idx] = value;
+        }
+    }
+    else
+    {
+        while(pResults->Step())
+        {
+            const int idx = pResults->GetInt(0);
+            const int value = pResults->GetInt(1);
+            pArray[idx] = value;
+        }
+    }
+#else
+    while(pResults->Step())
 	{
-		const int idx = pResults->GetInt(0);
+        const int idx = pResults->GetInt(0);
 		const int value = pResults->GetInt(1);
 		pArray[idx] = value;
 	}
+#endif
 
 	pResults->Reset();
 

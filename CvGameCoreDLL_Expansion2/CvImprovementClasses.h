@@ -109,6 +109,10 @@ public:
 	bool IsAddsFreshWater() const;
 #endif
 	bool IsRequiresFlatlands() const;
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+    bool IsRequiresAdjacentCity() const;
+    bool IsRequiresHills() const;
+#endif
 	bool IsRequiresFlatlandsOrFreshWater() const;
 	bool IsRequiresFeature() const;
 	bool IsRequiresImprovement() const;
@@ -245,6 +249,10 @@ protected:
 	bool m_bAddsFreshWater;
 #endif
 	bool m_bRequiresFlatlands;
+#if defined(MOD_MORE_IMPROVEMENT_PLACESTYLES)
+    bool m_bRequiresAdjacentCity;
+    bool m_bRequiresHills;
+#endif
 	bool m_bRequiresFlatlandsOrFreshWater;
 	bool m_bRequiresFeature;
 	bool m_bRequiresImprovement;

@@ -983,6 +983,9 @@ protected:
 #if defined(MOD_GLOBAL_CITY_AUTOMATON_WORKERS)
 	int m_iAutomatons;
 #endif
+#if defined(MOD_EVENTS_CITY_BOMBARD)
+    int m_iCityBombardRange;
+#endif
 	FAutoVariable<int, CvCity> m_iHighestPopulation;
 	int m_iExtraHitPoints;
 

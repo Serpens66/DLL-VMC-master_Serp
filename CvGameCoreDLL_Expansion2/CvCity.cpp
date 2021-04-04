@@ -125,6 +125,9 @@ CvCity::CvCity() :
 #if defined(MOD_GLOBAL_CITY_AUTOMATON_WORKERS)
 	, m_iAutomatons(0)
 #endif
+#if defined(MOD_EVENTS_CITY_BOMBARD)
+    , m_iCityBombardRange(99)
+#endif
 	, m_iHighestPopulation("CvCity::m_iHighestPopulation", m_syncArchive)
 	, m_iExtraHitPoints(0)
 	, m_iNumGreatPeople("CvCity::m_iNumGreatPeople", m_syncArchive)
@@ -856,6 +859,9 @@ void CvCity::reset(int iID, PlayerTypes eOwner, int iX, int iY, bool bConstructo
 	m_iPopulation = 0;
 #if defined(MOD_GLOBAL_CITY_AUTOMATON_WORKERS)
 	m_iAutomatons = 0;
+#endif
+#if defined(MOD_EVENTS_CITY_BOMBARD)
+    m_iCityBombardRange = 99;
 #endif
 	m_iHighestPopulation = 0;
 	m_iExtraHitPoints = 0;
@@ -1717,7 +1723,16 @@ void CvCity::doTurn()
 	VALIDATE_OBJECT
 	CvPlot* pLoopPlot;
 	int iI;
-
+#if defined(MOD_EVENTS_CITY_BOMBARD)
+    if (MOD_EVENTS_CITY_BOMBARD) // update our cached value once per turn
+    {
+        int iValue = 0;
+        if (GAMEEVENTINVOKE_VALUE(iValue, GAMEEVENT_GetBombardRange, getOwner(), GetID()) == GAMEEVENTRETURN_VALUE) {
+            m_iCityBombardRange = iValue;
+        }
+    }
+    
+#endif
 	if(getDamage() > 0)
 	{
 		CvAssertMsg(m_iDamage <= GetMaxHitPoints(), "Somehow a city has more damage than hit points. Please show this to a gameplay programmer immediately.");
@@ -16166,14 +16181,24 @@ int CvCity::getBombardRange(bool& bIndirectFireAllowed) const
 	VALIDATE_OBJECT
 	
 	if (MOD_EVENTS_CITY_BOMBARD) {
-		int iValue = 0;
-		if (GAMEEVENTINVOKE_VALUE(iValue, GAMEEVENT_GetBombardRange, getOwner(), GetID()) == GAMEEVENTRETURN_VALUE) {
-			// Defend against modder stupidity!
-			if (iValue != 0 && ::abs(iValue) <= GC.getMAX_CITY_ATTACK_RANGE()) {
-				bIndirectFireAllowed = (iValue < 0);
-				return ::abs(iValue);
-			}
-		}
+		if (m_iCityBombardRange==99) // if not cached yet (we do not save this value)
+        {
+            int iValue = 0;
+            if (GAMEEVENTINVOKE_VALUE(iValue, GAMEEVENT_GetBombardRange, getOwner(), GetID()) == GAMEEVENTRETURN_VALUE) 
+            {
+                // m_iCityBombardRange = iValue; // does not work because of cont function -.- so we wont change the value here, but use the one we got. and doTurn will change the value
+                if (::abs(iValue) <= GC.getMAX_CITY_ATTACK_RANGE())
+                {
+                    bIndirectFireAllowed = (iValue < 0);
+                    return ::abs(iValue);
+                }                    
+            }
+        }
+        if (m_iCityBombardRange != 99 && ::abs(m_iCityBombardRange) <= GC.getMAX_CITY_ATTACK_RANGE()) 
+        {
+            bIndirectFireAllowed = (m_iCityBombardRange < 0);
+            return ::abs(m_iCityBombardRange);
+        }
 	}
 	
 	bIndirectFireAllowed = GC.getCAN_CITY_USE_INDIRECT_FIRE();
@@ -16216,6 +16241,8 @@ bool CvCity::CanRangeStrikeNow() const
 #if defined(MOD_EVENTS_CITY_BOMBARD)
 	bool bIndirectFireAllowed; // By reference, yuck!!!
 	int iRange = getBombardRange(bIndirectFireAllowed);
+    if (iRange == 0) 
+        return false;
 #else
 	int iRange = GC.getCITY_ATTACK_RANGE();
 	bool bIndirectFireAllowed = GC.getCAN_CITY_USE_INDIRECT_FIRE();
@@ -16332,6 +16359,8 @@ bool CvCity::canRangeStrikeAt(int iX, int iY) const
 #if defined(MOD_EVENTS_CITY_BOMBARD)
 	bool bIndirectFireAllowed; // By reference, yuck!!!
 	int iAttackRange = getBombardRange(bIndirectFireAllowed);
+    if (iAttackRange == 0) 
+        return false;
 #else
 	int iAttackRange = GC.getCITY_ATTACK_RANGE();
 #endif
@@ -16635,6 +16664,8 @@ void CvCity::DoNearbyEnemy()
 
 #if defined(MOD_EVENTS_CITY_BOMBARD)
 	int iSearchRange = getBombardRange();
+    if (iSearchRange == 0) 
+        return;
 #else
 	int iSearchRange = GC.getCITY_ATTACK_RANGE();
 #endif

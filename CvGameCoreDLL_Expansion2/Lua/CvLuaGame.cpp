@@ -2263,7 +2263,7 @@ int CvLuaGame::lIsInSomeReligion(lua_State* L)
 int CvLuaGame::lGetAvailablePantheonBeliefs(lua_State* L)
 {
 #if defined(MOD_EVENTS_ACQUIRE_BELIEFS)
-	PlayerTypes ePlayer = (PlayerTypes)luaL_optint(L, 1, GC.getGame().getActivePlayer());
+	PlayerTypes ePlayer = (PlayerTypes)luaL_optint(L, 1, NO_PLAYER); // serp: changed from activeplayer to NO_PLAYER by default. This is more safe, depending of who calls it. Instead we changed the lua popup files which are calling this to use activeplayer: ChooseReligionPopup.lua and ChoosePantheonPopup.lua
 #endif
 
 	lua_createtable(L, 0, 0);

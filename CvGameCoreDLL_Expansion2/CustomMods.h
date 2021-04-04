@@ -55,7 +55,16 @@
  ** 10.12: MOD_BETTER_BARBCAMP_SPAWNCODE zugefuegt und chillbarb mach nun auch 2/3*maxcamps und es gibt mindestzahl an camps je nach kartengroesse 1-6, falls es validspots gibt.
  **        sowie MOD_DEBUG_GAMEHOOKS zugefuegt, was per XML an/aus geschaltet werden kann 
  ** 10.13: fixed the bug that workers did not continue to build after they removed a feature (eg forest) (was in CvUnitMission.cpp) and doubled to min amount of barb camps
- **
+ ** 10.14: in CvReligionClasses.cpp fixed inability to found religion when 2 or more players had the same pantheon. and adjusted a bit with comment in lGetAvailablePantheonBeliefs in CvLuaGame.cpp. and added note that you also need to adjust popup.lua for these kind of mods to work.
+ **        with MOD_AUI_GAME_AUTOPAUSE_ON_ACTIVE_DISCONNECT_IF_NOT_SEQUENTIAL I set in CvGame.cpp the pause value to -1, to unpause the game after loading a mp game.
+ ** 
+ ** 10.15: Added GAMEEVENT_GoodyHutReceivedBonus also for shoshone goody picker.
+ ** added MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT , saves alot of ressources, since AI does not need to check every single plot for every belief when founding religion.
+ ** added MOD_MORE_IMPROVEMENT_PLACESTYLES which makes EVENTS_PLOT for me unnecessary , which saves a ton of ressources!
+ ** added MOD_LEVEL_PROMOTIONS ,so we can disable EVENTS_UNIT_UPGRADES
+ ** changed MOD_EVENTS_CITY_BOMBARD to only update the value once per turn per city, instead of thousand times per turn.
+ ** added minor_bugfix to allow more than one free policy per era, if set in database.
+ ** 
  **/
 
 // Comment out this line to include all the achievements code (which don't work in modded games, so we don't need the code!)
@@ -249,6 +258,7 @@
 // Enables traits to be enabled/obsoleted via beliefs and policies (v77)
 #define MOD_TRAITS_OTHER_PREREQS                    gCustomMods.isTRAITS_OTHER_PREREQS()
 // Enables any belief to be selected, even if already taken (v46) Serp: (in IsInSomeReligion in CvReligionClasses) if AnyBelif-Player chose one, others wont be able to select it too. whowards code had a bug, he wanted to have others to choose it too, but when they picked it, the religion wasnt found with error. So we either had to fix this, or refuse others to get same belief like AnyBelif-Player
+// It is important! that in ChooseReligionPopup.lua and ChoosePantheonPopup.lua the player id is given to all calls like GetAvailableBonusBeliefs. Otherwise the players theoretically can choose the same beliefs, but they will not show up in the list! (we could hardcode in DLL that these lua functions always use ActivePlayer if no player given, but who knows who is using these functions somewhere, so better only use activeplayer in those popup lua files, where it is save to use activeplayer)
 #define MOD_TRAITS_ANY_BELIEF                       gCustomMods.isTRAITS_ANY_BELIEF()
 // Enables additional trade route related traits (v52)
 #define MOD_TRAITS_TRADE_ROUTE_BONUSES              gCustomMods.isTRAITS_TRADE_ROUTE_BONUSES()
@@ -631,6 +641,7 @@
 
 // Events sent to ascertain the bombard range for a city, and if indirect fire is allowed (v32)
 //   GameEvents.GetBombardRange.Add(function(iPlayer, iCity) return (-1 * GameDefines.CITY_ATTACK_RANGE) end)
+// serp: made the game only call this event once per turn (beginning). on all the thousand other times, we use a chached value.
 #define MOD_EVENTS_CITY_BOMBARD                     gCustomMods.isEVENTS_CITY_BOMBARD()
 
 // Events sent to ascertain if one city is connected to another (v33)
@@ -684,6 +695,7 @@
 
 // Minor bug fixes (missing catch-all else clauses, etc) (v30 onwards)
 // serp, commented out ~2 of them, eg in CvUnitMission.cpp to make workers continue to work after removing a feature
+// serp added in CvTeam SetCurrentEra a bugfix whoward noted in v95
 #define MOD_BUGFIX_MINOR 							(true)
 // Minor bug fixes in the Lua API (v86 onwards)
 #define MOD_BUGFIX_LUA_API 							(true)
@@ -780,6 +792,7 @@
 // adds Obsolete Era to WonderProductionMod Notification (eg marble), written by myself
 #define MOD_RESOURCES_WONDERMOD_TXT_OBSOLETE
 // allow anyone to choose his panthon, even if an other player has already choosed it. from CP (28.03.2020)
+// It is important! that in ChooseReligionPopup.lua and ChoosePantheonPopup.lua the player id is given to all calls like GetAvailableBonusBeliefs. Otherwise the players theoretically can choose the same beliefs, but they will not show up in the list! (we could hardcode in DLL that these lua functions always use ActivePlayer if no player given, but who knows who is using these functions somewhere, so better only use activeplayer in those popup lua files, where it is save to use activeplayer)
 #define MOD_ANY_PANTHEON						gCustomMods.isANY_PANTHEON()
 // Event sent on visibilty count changed of a plot
 //   GameEvents.VisibilityCountChanged.Add(function(iTeam, iChange, iSeeInvisible, bInformExplorationTracking, bAlwaysSeeInvisible, iUnit, iPlotX, iPlotY, iPlayer) end)
@@ -846,6 +859,12 @@
 #define MOD_BETTER_BARBCAMP_SPAWNCODE
 /// if enabled, do many customlogs during GAMEEVENTINVOKE_HOOK and so on, to find out cause of freeze caused by this/Lock
 #define MOD_DEBUG_GAMEHOOKS				gCustomMods.isDEBUG_GAMEHOOKS()
+// add fast checks for beliefs, if they at all change specific yields, without the need to iterate for every single belief over every single plot to check for it -.- this should speed up AI turns while they choose beliefs significantly (ScoreBelief).
+#define MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT
+// adds more improvement placement restrictions, like RequiresHills and RequiresAdjacentCity (we add this, so we can disable the EVENTS_PLOT from whoward, because they are really really heavily send)
+#define MOD_MORE_IMPROVEMENT_PLACESTYLES
+// incoorperates my mod Level Promotions into DLL and assign the promotion PROM_UNLOCK_LVL_2/3/4 at levelup.
+#define MOD_LEVEL_PROMOTIONS				gCustomMods.isLEVEL_PROMOTIONS()
 
 ////////////////////////
 
@@ -1486,6 +1505,7 @@ public:
     MOD_OPT_DECL(POSITIVE_STRAT_COMBAT);
     MOD_OPT_DECL(EVENTS_PRE_SAVE_EVENT);
     MOD_OPT_DECL(DEBUG_GAMEHOOKS);
+    MOD_OPT_DECL(LEVEL_PROMOTIONS);
     
     
 
