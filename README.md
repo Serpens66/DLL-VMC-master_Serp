@@ -1,5 +1,5 @@
 # DLL-VMC-master_Serp
- Civilization 5 DLL mod, based on whowards DLL v94:  http://www.picknmixmods.com/mods/CivV/DLL/Various%20Mod%20Components.html
+ Civilization 5 DLL mod, based on whowards DLL v94:  http://www.picknmixmods.com/mods/CivV/DLL/Various%20Mod%20Components.html (github: https://github.com/whoward69/DLL-VMC)
 
 I added various fixes, especially for multiplayer and also added few new features, partly my own work, partly from Community Patch (https://github.com/LoneGazebo/Community-Patch-DLL), partly from Artifical Unintelligence (https://github.com/DelnarErsike/Civ5-Artificial-Unintelligence-DLL) and partly from noquitters mod (https://github.com/gskleres/nqmod-vs2008 )
 
