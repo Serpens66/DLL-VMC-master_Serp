@@ -6583,8 +6583,11 @@ bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) 
 		}
 #endif
 
-#if defined(MOD_GOODYHUT_ADJUSTMENTS) // make units less likely than others (we could do this in xml or so, but who cares...maybe later)
-            if (GC.getGame().getJonRandNum(100, "Goody Free Unit Chance") < 25)
+#if defined(MOD_GOODYHUT_ADJUSTMENTS) // make units less likely than other goodies (we could do this in xml or so...maybe later)
+            int iUnitchance = 50;
+            if((pUnit && pUnit->isHasPromotion((PromotionTypes)GC.getPROMOTION_GOODY_HUT_PICKER())))
+                iUnitchance = 10; // roundabout... assuming every non-picker has always ~5 possible goodies, which means 50*(1/5)=10. 10% chance with picker equals 50% without picker, so all will have a total chance of 10%.
+            if (GC.getGame().getJonRandNum(100, "Goody Free Unit Chance") > iUnitchance)
             {
                 return false;
             }
