@@ -911,7 +911,16 @@ UnitTypes CvBarbarians::GetRandomBarbarianUnitType(CvArea* pArea, UnitAITypes eU
 					}
 				}
 			}
-
+#if defined(MOD_BETTER_BARBCAMP_SPAWNCODE) // do not spawn obsolete units
+            if(bValid)
+			{
+                TechTypes eObsoleteTech = (TechTypes) kUnit.GetObsoleteTech();
+                if(GET_TEAM(BARBARIAN_TEAM).GetTeamTechs()->HasTech(eObsoleteTech))
+                {
+                    bValid = false;
+                }
+            }
+#endif
 			if(bValid)
 			{
 				if(pArea->isWater() && kUnit.GetDomainType() != DOMAIN_SEA)
@@ -1051,18 +1060,29 @@ void CvBarbarians::DoSpawnBarbarianUnit(CvPlot* pPlot, bool bIgnoreMaxBarbarians
 	if (pPlot && pPlot->GetNumCombatUnits() == 0)
 	{
 		UnitTypes eUnit;
+#if defined(MOD_BETTER_BARBCAMP_SPAWNCODE)
+#if defined(MOD_EVENTS_BARBARIANS)
+		eUnit = GetRandomBarbarianUnitType(pPlot, UNITAI_DEFENSE); // serp: to fill a camp, use defense!
+#else
+		eUnit = GetRandomBarbarianUnitType(GC.getMap().getArea(pPlot->getArea()), UNITAI_DEFENSE);
+#endif
+#else
 #if defined(MOD_EVENTS_BARBARIANS)
 		eUnit = GetRandomBarbarianUnitType(pPlot, UNITAI_FAST_ATTACK);
 #else
 		eUnit = GetRandomBarbarianUnitType(GC.getMap().getArea(pPlot->getArea()), UNITAI_FAST_ATTACK);
 #endif
+#endif
 
 		if (eUnit != NO_UNIT)
 		{
 			CvUnit* pUnit = GET_PLAYER(BARBARIAN_PLAYER).initUnit(eUnit, pPlot->getX(), pPlot->getY(), UNITAI_FAST_ATTACK);
-			if (pUnit)
+#if defined(MOD_BETTER_BARBCAMP_SPAWNCODE)
+            if (pUnit && bFinishMoves) // no need to force finishMoves, barb logic let them stay in camp anyway
                 pUnit->finishMoves();
-			
+#else
+            pUnit->finishMoves();
+#endif			
 #if defined(MOD_EVENTS_BARBARIANS)
 			if (MOD_EVENTS_BARBARIANS && pUnit!=NULL) {
 				GAMEEVENTINVOKE_HOOK(GAMEEVENT_BarbariansSpawnedUnit, pPlot->getX(), pPlot->getY(), eUnit, pUnit->GetID(), pPlot->getX(), pPlot->getY());

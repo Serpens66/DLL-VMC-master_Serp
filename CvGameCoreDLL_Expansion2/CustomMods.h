@@ -52,8 +52,8 @@
  ** - added GAMEEVENT_PreSaveEvent
  ** 
  ** 10.11 added CustomLog into CustomMods::eventHook and LuaSupport::CallHook to find out if that is causing freezes with GAMEEVENT_PreSaveEvent... (seems to be the lock, bool bResult = pkScriptSystem->CallHook(szName, args, value); in LuaSupport::CallHook is never finished)
- ** 10.12: MOD_BETTER_BARBCAMP_SPAWNCODE zugefuegt und chillbarb mach nun auch 2/3*maxcamps und es gibt mindestzahl an camps je nach kartengroesse 1-6, falls es validspots gibt.
- **        sowie MOD_DEBUG_GAMEHOOKS zugefuegt, was per XML an/aus geschaltet werden kann 
+ ** 10.12: MOD_BETTER_BARBCAMP_SPAWNCODE added and chillbarb only do 2/3*maxcamps and a min amount of camps, depending on map size 2-12.
+ **        also MOD_DEBUG_GAMEHOOKS added, enable/disable via xml. to find out event spam.
  ** 10.13: fixed the bug that workers did not continue to build after they removed a feature (eg forest) (was in CvUnitMission.cpp) and doubled to min amount of barb camps
  ** 10.14: in CvReligionClasses.cpp fixed inability to found religion when 2 or more players had the same pantheon. and adjusted a bit with comment in lGetAvailablePantheonBeliefs in CvLuaGame.cpp. and added note that you also need to adjust popup.lua for these kind of mods to work.
  **        with MOD_AUI_GAME_AUTOPAUSE_ON_ACTIVE_DISCONNECT_IF_NOT_SEQUENTIAL I set in CvGame.cpp the pause value to -1, to unpause the game after loading a mp game.
@@ -65,6 +65,11 @@
  ** changed MOD_EVENTS_CITY_BOMBARD to only update the value once per turn per city, instead of thousand times per turn.
  ** added minor_bugfix to allow more than one free policy per era, if set in database.
  ** 
+ ** 10.16
+ ** disabled GoodyHutCanNotReceive
+ ** added GAMEEVENT_BarbariansSpawnedUnit for barbarians from goody huts.
+ ** added MOD_GOODYHUT_ADJUSTMENTS
+ **
  **/
 
 // Comment out this line to include all the achievements code (which don't work in modded games, so we don't need the code!)
@@ -459,6 +464,7 @@
 // Event sent when a Goody Hut is entered (v33)
 //   GameEvents.GoodyHutCanNotReceive.Add(function(iPlayer, iUnit, eGoody, bPick) return false end)
 //   GameEvents.GoodyHutReceivedBonus.Add(function(iPlayer, iUnit, eGoody, iX, iY) end)
+// serp: disabled GoodyHutCanNotReceive ! (events that are sent too often are terrible for performance)
 #define MOD_EVENTS_GOODY_CHOICE                     gCustomMods.isEVENTS_GOODY_CHOICE()
 
 // Events sent if a Goody Hut is giving a tech
@@ -865,6 +871,8 @@
 #define MOD_MORE_IMPROVEMENT_PLACESTYLES
 // incoorperates my mod Level Promotions into DLL and assign the promotion PROM_UNLOCK_LVL_2/3/4 at levelup.
 #define MOD_LEVEL_PROMOTIONS				gCustomMods.isLEVEL_PROMOTIONS()
+// some logic adjustments in CvPlayer for can/do receive goody. This is personal taste for my modpack, not something that everyone wants to add to the DLL!
+#define MOD_GOODYHUT_ADJUSTMENTS
 
 ////////////////////////
 
