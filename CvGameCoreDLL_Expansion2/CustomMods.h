@@ -33,17 +33,14 @@
  ****************************************************************************/
 #define MOD_DLL_GUID {0xcf7d28a8, 0x1684, 0x4420, { 0xaf, 0x45, 0x11, 0x7, 0xc, 0xb, 0x8c, 0x4a }} // {CF7D28A8-1684-4420-AF45-11070C0B8C4A}
 #define MOD_DLL_NAME "Pick'N'Mix BNW DLL"
-#define MOD_DLL_VERSION_NUMBER ((uint) 94)
+#define MOD_DLL_VERSION_NUMBER ((uint) 97)
 #define MOD_DLL_VERSION_STATUS ""			// a (alpha), b (beta) or blank (released)
 #define MOD_DLL_CUSTOM_BUILD_NAME ""
 
 /** Serp info for myself:
- ** version 10.11
+ ** version 10.17
  ** disabled: MOD_AI_MP_DIPLOMACY, MOD_AUI_MILITARY_FIX_BARBARIAN_THREAT, MOD_CVM_AUTOSAVE_FIX
  ** should not enable in xml: MOD_AI_SMART_V3 (long turn duration after a while)
- ** 
- ** 
- ** 
  ** 
  ** search for "serp" to find notes about my changes/additions.
  ** 
@@ -69,6 +66,28 @@
  ** disabled GoodyHutCanNotReceive
  ** added GAMEEVENT_BarbariansSpawnedUnit for barbarians from goody huts.
  ** added MOD_GOODYHUT_ADJUSTMENTS
+ ** added to MOD_BETTER_BARBCAMP_SPAWNCODE: barbarians spwan no obsolete units anymore
+ **
+ ** 10.17 (04.04.2021)
+ ** removed barbarian "no obsolete units" cause this was already the case (canTrain()), but Barbarian Archer/Warrior had no obsolete tech assigned. Did this in barbarian mod know and in modpack.
+ ** MOD_BETTER_BARBCAMP_SPAWNCODE reduced chance of UNITAI_CITY_BOMBARD barbarian units spawning.
+ ** fixed a bug introduced with MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT
+ ** MOD_GOODYHUT_ADJUSTMENTS: removed JonRand code from canreceivegoody function, cause this is called for popups causing desync... instead added a not-saved list of chosen goodies, so you can only get any unit-goody once per load.
+ ** within MOD_GOODYHUT_ADJUSTMENTS: made sure that you wont get the tech from goodyhut that you are currently researching -> makes tech refund mod and EVENTS_GOODY_TECH obsolete.
+ **
+ ** 10.18 (29.08.2022)
+ ** MOD_GOODYHUT_ADJUSTMENTS: fixed in CvPlayer.cpp the bNewUnitIsBarbarian related code. previously I did if(bNewUnitIsBarbarian || (pNewUnit && pUnit && pUnit->AreUnitsOfSameType(*pNewUnit))) , which did not check if pUnit/pNewUnit even exit. now it includes thsi check also for barbarian. (this caused crash otherwise)
+ ** added all new code from whoward v95: notable: MOD_BUGFIX_NAVAL_TARGETING
+ ** added all new code from whoward v96: Adds two new columns to the Improvements table - NegatesTerrainDamage and NegatesFeatureDamage which can be used to switch off terrain/feature damage from plots, eg for a tunnel in a mountain or an igloo on ice. 
+ ** added all new code from whoward v97: it should fix both the "no capital if only occupied/puppet cities" and the "use an occupied/puppet city over a settled city" bugs
+ ** changed MOD_DLL_VERSION_NUMBER to 97
+ ** outcommented GAMEEVENT_GoodyHutCanNotReceive to be able to check GameEvents.GoodyHutCanNotReceive~=nil in lua if this event is active or not (eg used in my ExplorerGoodyBonus.lua )
+ **
+ **
+ **
+ **
+ **
+ **
  **
  **/
 
@@ -646,6 +665,8 @@
 #define MOD_EVENTS_CITY_AIRLIFT                     gCustomMods.isEVENTS_CITY_AIRLIFT()
 
 // Events sent to ascertain the bombard range for a city, and if indirect fire is allowed (v32)
+//   updated to permit a range of 0 for no bombardment possible (v95)
+// Return a negative range if indirect fire is permitted
 //   GameEvents.GetBombardRange.Add(function(iPlayer, iCity) return (-1 * GameDefines.CITY_ATTACK_RANGE) end)
 // serp: made the game only call this event once per turn (beginning). on all the thousand other times, we use a chached value.
 #define MOD_EVENTS_CITY_BOMBARD                     gCustomMods.isEVENTS_CITY_BOMBARD()
@@ -749,6 +770,8 @@
 #define MOD_BUGFIX_NAVAL_FREE_UNITS                 gCustomMods.isBUGFIX_NAVAL_FREE_UNITS()
 // Fixes the bug where the naval units jump to the nearest city and not the nearest available non-lake water plot
 #define MOD_BUGFIX_NAVAL_NEAREST_WATER              gCustomMods.isBUGFIX_NAVAL_NEAREST_WATER()
+// Fixes the bug where naval units in hill cities attack from the top of the hill, not the harbour (v95)
+#define MOD_BUGFIX_NAVAL_TARGETING					gCustomMods.isBUGFIX_NAVAL_TARGETING() // serp: whoward made this always active: (true) , we allow the xml config value
 // Fixes the bug where stacked ranged units may attack out of cities but melee units may not
 #define MOD_BUGFIX_CITY_STACKING                    gCustomMods.isBUGFIX_CITY_STACKING()
 // Fixes the bug in goody hut messages that have parameters (v38)
@@ -872,6 +895,20 @@
 // incoorperates my mod Level Promotions into DLL and assign the promotion PROM_UNLOCK_LVL_2/3/4 at levelup.
 #define MOD_LEVEL_PROMOTIONS				gCustomMods.isLEVEL_PROMOTIONS()
 // some logic adjustments in CvPlayer for can/do receive goody. This is personal taste for my modpack, not something that everyone wants to add to the DLL!
+// contains: 
+//   settler/worker received from goodyhuts spawn as barbarian unit you need to catch.
+//   goody huts spawning barbs: less barbarians on lower game difficulty
+//   allow to place barb units on top of barb settlers/workers
+//   spawned bars are more likley to match current era
+//   a settler that was spawned in as barbarian, stays a settler when capturing
+//   disabled GoodyHutCanNotReceive serp, because too heavy event sending
+//   disabled receving xp from goody, because we will add xp to every goodyhut in our modpack
+//   goody reward: pantheon faith can be earlier
+//   removed reveal barbs check: we will make a combo in xml with map/barb and resource reveal. so it does not matter if there are no barbs near, we would still give the other reveals (if there is a resource to reveal)
+//   from CP, do not give the tech we are currently researching
+//   some goodies (units) are only allowed once per player (per load/game session, because trying to save it different causes desync, see changelog below)
+//   can receive combat unit as goody also within the first 20 turns
+//   goody gold reward scales on era/gamespeed and culture/faith also on era (gamespeed was already in code)
 #define MOD_GOODYHUT_ADJUSTMENTS
 
 ////////////////////////
@@ -1106,7 +1143,7 @@ enum BattleTypeTypes
 #define GAMEEVENT_GetDiploModifier				"GetDiploModifier",				"iii"
 #define GAMEEVENT_GetBombardRange				"GetBombardRange",				"ii"
 #define GAMEEVENT_GetReligionToFound			"GetReligionToFound",			"iib"
-#define GAMEEVENT_GoodyHutCanNotReceive			"GoodyHutCanNotReceive",		"iiib"
+// #define GAMEEVENT_GoodyHutCanNotReceive			"GoodyHutCanNotReceive",		"iiib"
 #define GAMEEVENT_GoodyHutReceivedBonus			"GoodyHutReceivedBonus",		"iiiii"
 #define GAMEEVENT_GoodyHutCanResearch			"GoodyHutCanResearch",			"ii"
 #define GAMEEVENT_GoodyHutTechResearched		"GoodyHutTechResearched",		"ii"
@@ -1489,6 +1526,7 @@ public:
 	MOD_OPT_DECL(BUGFIX_FREE_FOOD_BUILDING);
 	MOD_OPT_DECL(BUGFIX_NAVAL_FREE_UNITS);
 	MOD_OPT_DECL(BUGFIX_NAVAL_NEAREST_WATER);
+    MOD_OPT_DECL(BUGFIX_NAVAL_TARGETING);
 	MOD_OPT_DECL(BUGFIX_CITY_STACKING);
 	MOD_OPT_DECL(BUGFIX_BARB_CAMP_TERRAINS);
 	MOD_OPT_DECL(BUGFIX_BARB_CAMP_SPAWNING);

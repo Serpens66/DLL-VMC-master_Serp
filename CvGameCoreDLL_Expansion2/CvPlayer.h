@@ -2242,6 +2242,10 @@ protected:
 #if defined(MOD_LUA_AI_DEAL_FETCHINFO)
     FAutoVariable<int, CvPlayer> m_iCachedValueOfPeaceWithHuman;
 #endif  
+
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+    std::vector<GoodyTypes> m_avReceivedUnitGoodies;
+#endif
     
 	EndTurnBlockingTypes  m_eEndTurnBlockingType;
 	int  m_iEndTurnBlockingNotificationIndex;

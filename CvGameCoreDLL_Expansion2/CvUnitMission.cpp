@@ -989,7 +989,8 @@ bool CvUnitMission::CanStartMission(UnitHandle hUnit, int iMission, int iData1, 
 #endif
 
 // #if defined(MOD_BUGFIX_MINOR) // serp: disabled this one, because for whatever reasons it stops workers to continue working after removing a feature
-	// Bail early if the unit has no moves left
+	// serp: we also could add a !(hUnit->IsWork()) check, but who knows what else units are also affected by this "no need to check further Fix"
+    // Bail early if the unit has no moves left
 	// if (hUnit->maxMoves() > 0 && hUnit->getMoves() <= 0)
 	// {
 		// return false;

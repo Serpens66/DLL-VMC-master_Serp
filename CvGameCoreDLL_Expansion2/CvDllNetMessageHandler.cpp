@@ -796,11 +796,6 @@ void CvDllNetMessageHandler::ResponseGoodyChoice(PlayerTypes ePlayer, int iPlotX
 	CvPlot* pPlot = GC.getMap().plot(iPlotX, iPlotY);
 	CvUnit* pUnit = kPlayer.getUnit(iUnitID);
 	kPlayer.receiveGoody(pPlot, eGoody, pUnit);
-#if defined(MOD_EVENTS_GOODY_CHOICE) // for shoshones
-    if (MOD_EVENTS_GOODY_CHOICE)
-        //   GameEvents.GoodyHutReceivedBonus.Add(function(iPlayer, iUnit, eGoody, iX, iY) end)
-        GAMEEVENTINVOKE_HOOK(GAMEEVENT_GoodyHutReceivedBonus, ePlayer, iUnitID, eGoody, iPlotX, iPlotY);
-#endif
 }
 
 //------------------------------------------------------------------------------

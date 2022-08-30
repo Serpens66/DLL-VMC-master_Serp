@@ -428,6 +428,9 @@ CvPlayer::CvPlayer() :
 	, m_piYieldChangeWorldWonder(NULL)
 	, m_ppiBuildingClassYieldChange("CvPlayer::m_ppaaiBuildingClassYieldChange", m_syncArchive)
 #endif
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+    , m_avReceivedUnitGoodies(NULL)
+#endif
 	, m_ppaaiImprovementYieldChange("CvPlayer::m_ppaaiImprovementYieldChange", m_syncArchive)
 	, m_ppaaiBuildingClassYieldMod("CvPlayer::m_ppaaiBuildingClassYieldMod", m_syncArchive)
 	, m_UnitCycle(this)
@@ -811,6 +814,9 @@ void CvPlayer::uninit()
 	m_piYieldFromKills.clear();
 	m_piYieldFromBarbarianKills.clear();
 	m_ppiBuildingClassYieldChange.clear();
+#endif
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+    m_avReceivedUnitGoodies.clear();
 #endif
 	m_ppaaiImprovementYieldChange.clear();
 	m_ppaaiBuildingClassYieldMod.clear();
@@ -1423,7 +1429,9 @@ void CvPlayer::reset(PlayerTypes eID, bool bConstructorCall)
 			m_ppiBuildingClassYieldChange.setAt(i, yield);
 		}
 #endif
-
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+        m_avReceivedUnitGoodies.clear();
+#endif
 		m_ppaaiImprovementYieldChange.clear();
 		m_ppaaiImprovementYieldChange.resize(GC.getNumImprovementInfos());
 		for(unsigned int i = 0; i < m_ppaaiImprovementYieldChange.size(); ++i)
@@ -5909,7 +5917,11 @@ void CvPlayer::findNewCapital()
 	BuildingTypes eCapitalBuilding;
 	int iValue;
 	int iBestValue;
+#if defined(MOD_BUGFIX_NO_PUPPET_CAPITALS)
+	int iLoop = 0;
+#else
 	int iLoop;
+#endif
 
 	eCapitalBuilding = ((BuildingTypes)(getCivilizationInfo().getCivilizationBuildings(GC.getCAPITAL_BUILDINGCLASS())));
 
@@ -5956,16 +5968,17 @@ void CvPlayer::findNewCapital()
 	}
 
 #if defined(MOD_BUGFIX_NO_PUPPET_CAPITALS)
-	if (pBestCity != NULL)
+	if (pBestCity == NULL)
 	{
-		for (pLoopCity = firstCity(&iLoop); pLoopCity != NULL; pLoopCity = nextCity(&iLoop))
+		iLoop = 0;
+        for (pLoopCity = firstCity(&iLoop); pLoopCity != NULL; pLoopCity = nextCity(&iLoop))
 		{
 			if (pLoopCity != pOldCapital)
 			{
 				if (0 == pLoopCity->GetCityBuildings()->GetNumRealBuilding(eCapitalBuilding))
 				{
 					// Second pass, consider only those we ignored first time
-					if (pLoopCity->IsResistance())
+					if (pLoopCity->IsResistance() && !pLoopCity->IsPuppet())
 					{
 						// We'll take a city in resistance (ie one we have decided to assimilate) over all others
 						iValue = pLoopCity->getPopulation() + 500;
@@ -6297,6 +6310,7 @@ void CvPlayer::disband(CvCity* pCity)
 
 //	--------------------------------------------------------------------------------
 /// Is a Particular Goody ID a valid Goody for a certain plot?
+// serp: BEWARE!!! Do not use any random stuff within this function, because for goody-picking players this is called twice, messing the random generator!
 bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) const
 {
 	CvCity* pCity;
@@ -6511,6 +6525,10 @@ bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) 
 			{
 				if(GetPlayerTechs()->CanResearch(eTech))
 				{
+#if defined(MOD_GOODYHUT_ADJUSTMENTS) // from CP, do not give the tech we are currently researching
+                    if(GetPlayerTechs()->GetCurrentResearch() != eTech)
+                    {
+#endif
 					bool bUseTech = true;
 					ICvEngineScriptSystem1* pkScriptSystem = gDLL->GetScriptSystem();
 					if (pkScriptSystem) 
@@ -6531,8 +6549,16 @@ bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) 
 					if(bUseTech)
 					{
 						bTechFound = true;
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+                        break; // of course break only makes sense, if we found a valid tech
+#endif
 					}
+#if !defined(MOD_GOODYHUT_ADJUSTMENTS)
 					break;
+#endif
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+                    }
+#endif
 				}
 			}
 		}
@@ -6559,7 +6585,19 @@ bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) 
 
 	if(kGoodyInfo.getUnitClassType() != NO_UNITCLASS)
 	{
-		eUnit = ((UnitTypes)(getCivilizationInfo().getCivilizationUnits(kGoodyInfo.getUnitClassType())));
+		
+#if defined(MOD_GOODYHUT_ADJUSTMENTS) // do not allow goodies twice that we put into that list
+        int iReceivedUnitGoodiesLoop;
+        for(iReceivedUnitGoodiesLoop = 0; iReceivedUnitGoodiesLoop < (int) m_avReceivedUnitGoodies.size(); iReceivedUnitGoodiesLoop++)
+        {
+            if(m_avReceivedUnitGoodies[iReceivedUnitGoodiesLoop] == eGoody)
+            {
+                return false;
+            }
+        }
+#endif
+        
+        eUnit = ((UnitTypes)(getCivilizationInfo().getCivilizationUnits(kGoodyInfo.getUnitClassType())));
 
 		if(eUnit == NO_UNIT)
 		{
@@ -6581,16 +6619,6 @@ bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) 
 				return false;
 			}
 		}
-#endif
-
-#if defined(MOD_GOODYHUT_ADJUSTMENTS) // make units less likely than other goodies (we could do this in xml or so...maybe later)
-            int iUnitchance = 50;
-            if((pUnit && pUnit->isHasPromotion((PromotionTypes)GC.getPROMOTION_GOODY_HUT_PICKER())))
-                iUnitchance = 10; // roundabout... assuming every non-picker has always ~5 possible goodies, which means 50*(1/5)=10. 10% chance with picker equals 50% without picker, so all will have a total chance of 10%.
-            if (GC.getGame().getJonRandNum(100, "Goody Free Unit Chance") > iUnitchance)
-            {
-                return false;
-            }
 #endif
 
 		// Builders
@@ -6656,10 +6684,12 @@ bool CvPlayer::canReceiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit) 
 	// Barbarians
 	if(kGoodyInfo.getBarbarianUnitClass() != NO_UNITCLASS)
 	{
-		if(GC.getGame().isOption(GAMEOPTION_NO_BARBARIANS))
+#if !defined(MOD_GOODYHUT_ADJUSTMENTS) // in my modpack, barbarians only spawn together with a free unit. and we will leave out the barbarians, when GAMEOPTION_NO_BARBARIANS is active in receivegoody
+        if(GC.getGame().isOption(GAMEOPTION_NO_BARBARIANS))
 		{
 			return false;
 		}
+#endif
 
 		if(getNumCities() == 0)
 		{
@@ -6716,7 +6746,13 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
 	kGoodyInfo.CacheResult(kResult);
 
 	CvGoodyHuts::DoPlayerReceivedGoody(GetID(), eGoody);
-
+    
+#if defined(MOD_EVENTS_GOODY_CHOICE)
+    if (MOD_EVENTS_GOODY_CHOICE)
+        //   GameEvents.GoodyHutReceivedBonus.Add(function(iPlayer, iUnit, eGoody, iX, iY) end)
+        GAMEEVENTINVOKE_HOOK(GAMEEVENT_GoodyHutReceivedBonus, GetID(), pUnit ? pUnit->GetID() : -1, eGoody, pPlot ? pPlot->getX() : -1, pPlot ? pPlot->getY() : -1);
+#endif
+    
 	strBuffer = kGoodyInfo.GetDescription();
 
 	// Gold
@@ -7146,7 +7182,13 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
 #if defined(MOD_EVENTS_GOODY_TECH)
 					}
 #endif
-
+#if defined(MOD_GOODYHUT_ADJUSTMENTS) // from CP, do not give the tech we are currently researching
+                    //Are we already researching a tech? No value here.
+					if(GetPlayerTechs()->GetCurrentResearch() == eTech)
+					{
+						bUseTech = false;
+					}
+#endif
 					if(bUseTech)
 					{
 						iValue = (1 + GC.getGame().getJonRandNum(10000, "Goody Tech"));
@@ -7189,12 +7231,17 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
 	// Units
 	if(kGoodyInfo.getUnitClassType() != NO_UNITCLASS)
 	{
-		eUnit = (UnitTypes)getCivilizationInfo().getCivilizationUnits(kGoodyInfo.getUnitClassType());
+		
+#if defined(MOD_GOODYHUT_ADJUSTMENTS)
+        m_avReceivedUnitGoodies.push_back(eGoody); // remember the goodies the player received and do not allow them again (at least until next loading, cause we do not save this to not break savegames)
+#endif
+        
+        eUnit = (UnitTypes)getCivilizationInfo().getCivilizationUnits(kGoodyInfo.getUnitClassType());
 
 		if(eUnit != NO_UNIT)
 		{
 #if defined(MOD_GOODYHUT_ADJUSTMENTS)
-            bool bIsBarbarian = false;
+            bool bNewUnitIsBarbarian = false;
             CvUnit* pNewUnit = NULL;
             CvUnitEntry* pUnitInfo = GC.getUnitInfo(eUnit);
             if(kGoodyInfo.getBarbarianUnitClass() != NO_UNITCLASS) // if we also will spawn barbarians
@@ -7202,10 +7249,10 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
                 if(pUnitInfo != NULL && (pUnitInfo->IsFound() || pUnitInfo->IsFoundAbroad() || pUnitInfo->GetWorkRate() > 0)) // and it is a settler or worker
                 {
                     pNewUnit = GET_PLAYER(BARBARIAN_PLAYER).initUnit(eUnit, pPlot->getX(), pPlot->getY()); // then spawn the settler/worker as a barbarian unit
-                    bIsBarbarian = true;
+                    bNewUnitIsBarbarian = true;
                 }
             }
-            if (!bIsBarbarian)
+            if (!bNewUnitIsBarbarian)
             {
                 // see if there is a newer unit we can have techwise
                 UnitClassTypes eUpgradeUnitClass = (UnitClassTypes) pUnitInfo->GetGoodyHutUpgradeUnitClass();
@@ -7249,7 +7296,6 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
                     eUpgradeUnitUse = eUpgradeUnit;
                     eUpgradeUnitClass = (UnitClassTypes) pUnitInfoUpgrade->GetGoodyHutUpgradeUnitClass();
                     eUpgradeUnit = (eUpgradeUnitClass!=NULL && eUpgradeUnitClass!=NO_UNITCLASS) ? (UnitTypes) getCivilizationInfo().getCivilizationUnits(eUpgradeUnitClass) : NO_UNIT;
-                    CUSTOMLOG("while %i",eUpgradeUnitUse);
                 }
                 if(eUpgradeUnitUse!=NULL && eUpgradeUnitUse!=NO_UNIT)
                 {
@@ -7266,7 +7312,7 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
 #endif
 			// see if there is an open spot to put him - no over-stacking allowed!
 #if defined(MOD_GOODYHUT_ADJUSTMENTS)
-            if(bIsBarbarian || (pNewUnit && pUnit && pUnit->AreUnitsOfSameType(*pNewUnit)))  // pUnit isn't in this plot yet (if it even exists) so we can't check on if we are over-stacked directly
+            if((pNewUnit && pUnit && bNewUnitIsBarbarian) || (pNewUnit && pUnit && pUnit->AreUnitsOfSameType(*pNewUnit)))  // pUnit isn't in this plot yet (if it even exists) so we can't check on if we are over-stacked directly
 #else
 			if(pNewUnit && pUnit && pUnit->AreUnitsOfSameType(*pNewUnit))  // pUnit isn't in this plot yet (if it even exists) so we can't check on if we are over-stacked directly
 #endif
@@ -7296,7 +7342,7 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
 											if((pNewUnit->getDomainType() != DOMAIN_AIR) || pLoopPlot->isFriendlyCity(*pNewUnit, true))
 											{
 #if defined(MOD_GOODYHUT_ADJUSTMENTS)
-                                                if(bIsBarbarian || pLoopPlot->isRevealed(getTeam()))
+                                                if(bNewUnitIsBarbarian || pLoopPlot->isRevealed(getTeam()))
 #else
                                                 if(pLoopPlot->isRevealed(getTeam()))
 #endif
@@ -7352,21 +7398,28 @@ void CvPlayer::receiveGoody(CvPlot* pPlot, GoodyTypes eGoody, CvUnit* pUnit)
 		if(eUnit != NO_UNIT)
 		{
 			int iMinBarbs = kGoodyInfo.getMinBarbarians();
-#if defined(MOD_GOODYHUT_ADJUSTMENTS) // less barbarians on higher diff
-            const HandicapTypes eCurrentHandicap = GC.getGame().getHandicapType();
-            CvHandicapInfo* pkInfo = GC.getHandicapInfo(eCurrentHandicap);
-            if(pkInfo != NULL)
+#if defined(MOD_GOODYHUT_ADJUSTMENTS) // less barbarians on lower diff
+            if(GC.getGame().isOption(GAMEOPTION_NO_BARBARIANS))
             {
-                if (strcmp(pkInfo->GetType(), "HANDICAP_SETTLER") == 0 || strcmp(pkInfo->GetType(), "HANDICAP_CHIEFTAIN") == 0)
+                iMinBarbs = 0;
+            }
+            else
+            {
+                const HandicapTypes eCurrentHandicap = GC.getGame().getHandicapType();
+                CvHandicapInfo* pkInfo = GC.getHandicapInfo(eCurrentHandicap);
+                if(pkInfo != NULL)
                 {
-                    iMinBarbs -= 2;
+                    if (strcmp(pkInfo->GetType(), "HANDICAP_SETTLER") == 0 || strcmp(pkInfo->GetType(), "HANDICAP_CHIEFTAIN") == 0)
+                    {
+                        iMinBarbs -= 2;
+                    }
+                    else if (strcmp(pkInfo->GetType(), "HANDICAP_WARLORD") == 0 || strcmp(pkInfo->GetType(), "HANDICAP_PRINCE") == 0)
+                    {
+                        iMinBarbs -= 1;
+                    }
+                    if (iMinBarbs < 0)
+                        iMinBarbs = 0;
                 }
-                else if (strcmp(pkInfo->GetType(), "HANDICAP_WARLORD") == 0 || strcmp(pkInfo->GetType(), "HANDICAP_PRINCE") == 0)
-                {
-                    iMinBarbs -= 1;
-                }
-                if (iMinBarbs < 0)
-                    iMinBarbs = 0;
             }
 #endif
             for(iPass = 0; iPass < 10; iPass++)
@@ -7526,12 +7579,14 @@ void CvPlayer::doGoody(CvPlot* pPlot, CvUnit* pUnit)
 
 				if(canReceiveGoody(pPlot, eGoody, pUnit))
 				{
-					avValidGoodies.push_back(eGoody);
+                    avValidGoodies.push_back(eGoody);
 				}
 			}
 
 #if defined(MOD_GLOBAL_ANYTIME_GOODY_GOLD)
 			// Any valid Goodies?  If not, add back the gold goody hut(s)
+            // serp: this does not work for goody pickers, since they do not use avValidGoodies. a fix would be to remember here, that we put gold in it and down below
+            // if gold was put in, do not show the popup, instead just choose the gold. But since in my modpack are enough goody choices, this change is not important.
 			if(MOD_GLOBAL_ANYTIME_GOODY_GOLD && avValidGoodies.size() == 0)
 			{
 				for(int iGoodyLoop = 0; iGoodyLoop < playerHandicapInfo.getNumGoodies(); iGoodyLoop++)
@@ -7555,7 +7610,7 @@ void CvPlayer::doGoody(CvPlot* pPlot, CvUnit* pUnit)
 #endif
 
 			// Any valid Goodies?
-			if(avValidGoodies.size() > 0)
+			if(avValidGoodies.size() > 0) // serp: BEWARE, avValidGoodies is not used by goody picking player. they will again call canReceiveGoody with luasupport in popup. because of the definition of kPopupInfo, we can not give it avValidGoodies as param...
 			{
 #if defined(MOD_BUGFIX_MINOR)
 				// Fix the bug where the AI won't get anything for Goody Hut pickers!!!
@@ -7570,14 +7625,14 @@ void CvPlayer::doGoody(CvPlot* pPlot, CvUnit* pUnit)
 						CvPopupInfo kPopupInfo(BUTTONPOPUP_CHOOSE_GOODY_HUT_REWARD, GetID(), pUnit->GetID());
 						GC.GetEngineUserInterface()->AddPopup(kPopupInfo);
 						// We are adding a popup that the player must make a choice in, make sure they are not in the end-turn phase.
-// #if defined(MOD_BUGFIX_MINOR) // commented out by serp, does not make any sense to only do this in non-multiplayer.
-						// if (!GC.getGame().isReallyNetworkMultiPlayer())
-						// {
-							// CancelActivePlayerEndTurn();
-						// }
-// #else
+#if defined(MOD_BUGFIX_MINOR)
+						if (!GC.getGame().isReallyNetworkMultiPlayer())
+						{
+							CancelActivePlayerEndTurn();
+						}
+#else
 						CancelActivePlayerEndTurn();
-// #endif
+#endif
 					}
 				}
 				else
@@ -7585,11 +7640,6 @@ void CvPlayer::doGoody(CvPlot* pPlot, CvUnit* pUnit)
 					int iRand = GC.getGame().getJonRandNum(avValidGoodies.size(), "Picking a Goody result");
 					eGoody = (GoodyTypes) avValidGoodies[iRand];
 					receiveGoody(pPlot, eGoody, pUnit);
-#if defined(MOD_EVENTS_GOODY_CHOICE)
-					if (MOD_EVENTS_GOODY_CHOICE)
-						//   GameEvents.GoodyHutReceivedBonus.Add(function(iPlayer, iUnit, eGoody, iX, iY) end)
-						GAMEEVENTINVOKE_HOOK(GAMEEVENT_GoodyHutReceivedBonus, GetID(), pUnit ? pUnit->GetID() : -1, eGoody, pPlot->getX(), pPlot->getY());
-#endif
 				}
 				
 #if !defined(NO_ACHIEVEMENTS)

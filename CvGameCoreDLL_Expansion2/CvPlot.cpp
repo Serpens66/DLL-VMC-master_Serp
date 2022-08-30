@@ -1830,7 +1830,11 @@ void CvPlot::changeAdjacentSight(TeamTypes eTeam, int iRange, bool bIncrement, I
 }
 
 //	--------------------------------------------------------------------------------
+#if defined MOD_BUGFIX_NAVAL_TARGETING
+bool CvPlot::canSeePlot(const CvPlot* pPlot, TeamTypes eTeam, int iRange, DirectionTypes eFacingDirection, DomainTypes eUnitDomain) const
+#else
 bool CvPlot::canSeePlot(const CvPlot* pPlot, TeamTypes eTeam, int iRange, DirectionTypes eFacingDirection) const
+#endif
 {
 	iRange++;
 
@@ -1873,7 +1877,27 @@ bool CvPlot::canSeePlot(const CvPlot* pPlot, TeamTypes eTeam, int iRange, Direct
 			}
 
 			//check if anything blocking the plot
+#if defined MOD_BUGFIX_NAVAL_TARGETING
+			int iLevel;
+
+			if ((MOD_BUGFIX_NAVAL_TARGETING) && (eUnitDomain == DOMAIN_SEA && !isWater())) { // serp: also check if mod is enabled MOD_BUGFIX_NAVAL_TARGETING
+				iLevel = GC.getTerrainInfo(TERRAIN_COAST)->getSeeFromLevel();
+				iLevel += GC.getSEAWATER_SEE_FROM_CHANGE();
+
+				if (GET_TEAM(eTeam).isExtraWaterSeeFrom())
+				{
+					iLevel++;
+				}
+			}
+			else
+			{
+				iLevel = seeFromLevel(eTeam);
+			}
+
+			if (CvTargeting::CanSeeDisplacementPlot(startX, startY, dx, dy, iLevel))
+#else
 			if (CvTargeting::CanSeeDisplacementPlot(startX, startY, dx, dy, seeFromLevel(eTeam)))
+#endif
 			{
 				return true;
 			}
@@ -5878,6 +5902,64 @@ bool CvPlot::isBlockaded(PlayerTypes ePlayer)
 }
 #endif
 
+#if defined(MOD_API_PLOT_BASED_DAMAGE)
+//	--------------------------------------------------------------------------------
+int CvPlot::getTurnDamage(bool bIgnoreTerrainDamage, bool bIgnoreFeatureDamage, bool bExtraTerrainDamage, bool bExtraFeatureDamage) const
+{
+	int damage = 0;
+
+	if (MOD_API_PLOT_BASED_DAMAGE) {
+		const TerrainTypes eTerrain = isMountain() ? TERRAIN_MOUNTAIN : getTerrainType();
+		const FeatureTypes eFeature = getFeatureType();
+
+		// Make an exception for the volcano
+		if (eFeature != NO_FEATURE) {
+			CvFeatureInfo* pkFeatureInfo = GC.getFeatureInfo(eFeature);
+			if (pkFeatureInfo && strcmp(pkFeatureInfo->GetType(), "FEATURE_VOLCANO") == 0) {
+				bIgnoreTerrainDamage = false;
+				bIgnoreFeatureDamage = false;
+			}
+		}
+
+		// Is there an improvement on the plot that overrides terrain/feature damage, eg a tunnel in a mountain, or an igloo on ice
+		const ImprovementTypes eImprovement = getImprovementType();
+		CvImprovementEntry* pkImprovementEntry = (eImprovement != NO_IMPROVEMENT) ? GC.getImprovementInfo(eImprovement) : NULL;
+
+		if (eTerrain != NO_TERRAIN) {
+			CvTerrainInfo* pkTerrainInfo = GC.getTerrainInfo(eTerrain);
+			if (pkTerrainInfo) {
+				if (!(pkImprovementEntry && pkImprovementEntry->IsNegatesTerrainDamage())) {
+					if (!bIgnoreTerrainDamage) {
+						damage += pkTerrainInfo->getTurnDamage();
+					}
+
+					if (bExtraTerrainDamage) {
+						damage += pkTerrainInfo->getExtraTurnDamage();
+					}
+				}
+			}
+		}
+
+		if (eFeature != NO_FEATURE) {
+			CvFeatureInfo* pkFeatureInfo = GC.getFeatureInfo(eFeature);
+			if (pkFeatureInfo) {
+				if (!(pkImprovementEntry && pkImprovementEntry->IsNegatesFeatureDamage())) {
+					if (!bIgnoreFeatureDamage) {
+						damage += pkFeatureInfo->getTurnDamage();
+					}
+
+					if (bExtraFeatureDamage) {
+						damage += pkFeatureInfo->getExtraTurnDamage();
+					}
+				}
+			}
+		}
+	}
+
+	return damage;
+}
+#endif
+
 //	--------------------------------------------------------------------------------
 bool CvPlot::isFlatlands() const
 {
@@ -9244,7 +9326,6 @@ bool CvPlot::setRevealed(TeamTypes eTeam, bool bNewValue, bool bTerrainOnly, Tea
 						// Scale up or down based on difficulty
 						if(iFinderGold > 0)
 						{
-							// TODO - WH - scale this by game speed as well as difficulty
 							const int iStandardHandicap = GC.getInfoTypeForString("HANDICAP_PRINCE");
 							if(iStandardHandicap >= 0)
 							{
@@ -9255,6 +9336,11 @@ bool CvPlot::setRevealed(TeamTypes eTeam, bool bNewValue, bool bTerrainOnly, Tea
 									iFinderGold /= GC.getGame().getHandicapInfo().getBarbCampGold();
 								}
 							}
+                            // TODO - WH - scale this by game speed as well as difficulty
+							// Game Speed Mod
+							// iFinderGold *= GC.getGameSpeedInfo(GC.getGame().getGameSpeedType())->getGoldPercent();
+							// iFinderGold /= 100;
+                            // serp: I think we scale this already in lua code in SpainWonderBonusSpeedModifier mod?
 						}
 
 						if(iFinderGold > 0)

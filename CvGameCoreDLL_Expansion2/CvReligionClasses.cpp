@@ -6163,7 +6163,7 @@ int CvReligionAI::ScoreBelief(CvBeliefEntry* pEntry)
 {
 	int iRtnValue = 5;  // Base value since everything has SOME value
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT) // now we check everything fast, that is otherwise checked in ScoreBeliefAtPlot. and all of it is false, we do not need to check all plots for this belief!
-    if (pEntry->GetTerrainYieldChange(NULL,NULL)==1 || pEntry->GetPlotYieldChange(NULL,NULL)==1 || pEntry->GetFeatureYieldChange(NULL,NULL)==1 || pEntry->GetYieldChangeNaturalWonder(NULL)==1 || pEntry->GetYieldModifierNaturalWonder(NULL)==1 || pEntry->GetResourceYieldChange(NULL,NULL)==1 || pEntry->GetImprovementYieldChange(NO_IMPROVEMENT,NO_YIELD)==1)
+    if (pEntry->GetTerrainYieldChange(NO_TERRAIN,NO_YIELD)==1 || pEntry->GetPlotYieldChange(NO_PLOT,NO_YIELD)==1 || pEntry->GetFeatureYieldChange(NO_FEATURE,NO_YIELD)==1 || pEntry->GetYieldChangeNaturalWonder(NO_YIELD)==1 || pEntry->GetYieldModifierNaturalWonder(NO_YIELD)==1 || pEntry->GetResourceYieldChange(NO_RESOURCE,NO_YIELD)==1 || pEntry->GetImprovementYieldChange(NO_IMPROVEMENT,NO_YIELD)==1)
     { // only if any of the above it true, the plots matter for the belief. if not, we can skip to loop through all plots.
 #endif
 	// Loop through each plot on map
@@ -6229,7 +6229,7 @@ int CvReligionAI::ScoreBelief(CvBeliefEntry* pEntry)
 	return iRtnValue;
 }
 
-/// AI's evaluation of this belief's usefulness at this one plot // Serp note: if you add sth here, you should also add it to my fast heck before iterating over plots in ScoreBelief, see MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT
+/// AI's evaluation of this belief's usefulness at this one plot // Serp note: if you add sth here, you should also add it to my fast check before iterating over plots in ScoreBelief, see MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT
 int CvReligionAI::ScoreBeliefAtPlot(CvBeliefEntry* pEntry, CvPlot* pPlot)
 {
 	int iRtnValue = 0;

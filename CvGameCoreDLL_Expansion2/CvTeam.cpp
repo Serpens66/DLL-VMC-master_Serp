@@ -7174,7 +7174,7 @@ void CvTeam::SetCurrentEra(EraTypes eNewValue)
 			CvPlayerAI& kPlayer = GET_PLAYER(ePlayer);
 			if(kPlayer.isAlive() && kPlayer.getTeam() == GetID() && !kPlayer.isMinorCiv() && !kPlayer.isBarbarian())
 			{
-#if defined(MOD_BUGFIX_MINOR) // added by serp after noting from whoward
+#if defined(MOD_BUGFIX_MINOR) // added by serp after noting from whoward (v96)
                 int iNumFreePolicies = kPlayer.GetPlayerTraits()->GetFreeSocialPoliciesPerEra();
 #else
                 int iNumFreePolicies = kPlayer.GetPlayerTraits()->GetFreeSocialPoliciesPerEra() > 0;

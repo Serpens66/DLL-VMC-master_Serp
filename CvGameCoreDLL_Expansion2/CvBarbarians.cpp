@@ -911,16 +911,7 @@ UnitTypes CvBarbarians::GetRandomBarbarianUnitType(CvArea* pArea, UnitAITypes eU
 					}
 				}
 			}
-#if defined(MOD_BETTER_BARBCAMP_SPAWNCODE) // do not spawn obsolete units
-            if(bValid)
-			{
-                TechTypes eObsoleteTech = (TechTypes) kUnit.GetObsoleteTech();
-                if(GET_TEAM(BARBARIAN_TEAM).GetTeamTechs()->HasTech(eObsoleteTech))
-                {
-                    bValid = false;
-                }
-            }
-#endif
+
 			if(bValid)
 			{
 				if(pArea->isWater() && kUnit.GetDomainType() != DOMAIN_SEA)
@@ -975,6 +966,12 @@ UnitTypes CvBarbarians::GetRandomBarbarianUnitType(CvArea* pArea, UnitAITypes eU
 				{
 					iValue += 200;
 				}
+#if defined(MOD_BETTER_BARBCAMP_SPAWNCODE)
+                if(kUnit.GetUnitAIType(UNITAI_CITY_BOMBARD)) // if we allowed those units to barbarian, do not make too many of them
+				{
+					iValue -= 200;
+				}
+#endif
 
 				if(iValue > iBestValue)
 				{

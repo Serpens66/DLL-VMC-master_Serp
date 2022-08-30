@@ -150,7 +150,11 @@ public:
 	void changeSeeFromSight(TeamTypes eTeam, DirectionTypes eDirection, int iFromLevel, bool bIncrement, InvisibleTypes eSeeInvisible);
 	void changeAdjacentSight(TeamTypes eTeam, int iRange, bool bIncrement, InvisibleTypes eSeeInvisible, DirectionTypes eFacingDirection, bool bBasedOnUnit=true);
 #endif
+#if defined MOD_BUGFIX_NAVAL_TARGETING
+	bool canSeePlot(const CvPlot* plot, TeamTypes eTeam, int iRange, DirectionTypes eFacingDirection, DomainTypes eUnitDomain=DOMAIN_LAND) const;
+#else
 	bool canSeePlot(const CvPlot* plot, TeamTypes eTeam, int iRange, DirectionTypes eFacingDirection) const;
+#endif
 	bool shouldProcessDisplacementPlot(int dx, int dy, int range, DirectionTypes eFacingDirection) const;
 	void updateSight(bool bIncrement);
 	void updateSeeFromSight(bool bIncrement);
@@ -487,52 +491,7 @@ public:
 		return (FeatureTypes)f;
 	}
 #if defined(MOD_API_PLOT_BASED_DAMAGE)
-	int getTurnDamage(bool bIgnoreTerrainDamage, bool bIgnoreFeatureDamage, bool bExtraTerrainDamage, bool bExtraFeatureDamage) const
-	{
-		int damage = 0;
-
-		if (MOD_API_PLOT_BASED_DAMAGE) {
-			const TerrainTypes eTerrain = isMountain() ? TERRAIN_MOUNTAIN : getTerrainType();
-			const FeatureTypes eFeature = getFeatureType();
-			
-			// Make an exception for the volcano
-			if (eFeature != NO_FEATURE) {
-				CvFeatureInfo* pkFeatureInfo = GC.getFeatureInfo(eFeature);
-				if (pkFeatureInfo && pkFeatureInfo->GetType() == "FEATURE_VOLCANO") {
-					bIgnoreTerrainDamage = false;
-					bIgnoreFeatureDamage = false;
-				}
-			}
-
-			if (eTerrain != NO_TERRAIN) {
-				CvTerrainInfo* pkTerrainInfo = GC.getTerrainInfo(eTerrain);
-				if (pkTerrainInfo) {
-					if (!bIgnoreTerrainDamage) {
-						damage += pkTerrainInfo->getTurnDamage();
-					}
-					
-					if (bExtraTerrainDamage) {
-						damage += pkTerrainInfo->getExtraTurnDamage();
-					}
-				}
-			}
-
-			if (eFeature != NO_FEATURE) {
-				CvFeatureInfo* pkFeatureInfo = GC.getFeatureInfo(eFeature);
-				if (pkFeatureInfo) {
-					if (!bIgnoreFeatureDamage) {
-						damage += pkFeatureInfo->getTurnDamage();
-					}
-					
-					if (bExtraFeatureDamage) {
-						damage += pkFeatureInfo->getExtraTurnDamage();
-					}
-				}
-			}
-		}
-		
-		return damage;
-	}
+	int getTurnDamage(bool bIgnoreTerrainDamage, bool bIgnoreFeatureDamage, bool bExtraTerrainDamage, bool bExtraFeatureDamage) const;
 #endif
 	bool isImpassable()     const
 	{

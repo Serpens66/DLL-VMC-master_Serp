@@ -557,7 +557,7 @@ int CvBeliefEntry::GetBuildingClassTourism(int i) const
 int CvBeliefEntry::GetFeatureYieldChange(int i, int j) const
 {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-    if (i==NULL && j==NULL)
+    if (i==NO_FEATURE && j==NO_YIELD)
         return m_ppaiFeatureYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
     CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
@@ -588,7 +588,7 @@ int CvBeliefEntry::GetCityYieldFromUnimprovedFeature(int i, int j) const
 int CvBeliefEntry::GetUnimprovedFeatureYieldChange(int i, int j) const
 {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-    if (i==NULL && j==NULL)
+    if (i==NO_IMPROVEMENT && j==NO_YIELD)
         return m_ppiUnimprovedFeatureYieldChanges ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
     CvAssertMsg(i < GC.getNumFeatureInfos(), "Index out of bounds");
@@ -603,7 +603,7 @@ int CvBeliefEntry::GetUnimprovedFeatureYieldChange(int i, int j) const
 int CvBeliefEntry::GetResourceYieldChange(int i, int j) const
 {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-    if (i==NULL && j==NULL)
+    if (i==NO_RESOURCE && j==NO_YIELD)
         return m_ppaiResourceYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
     CvAssertMsg(i < GC.getNumResourceInfos(), "Index out of bounds");
@@ -621,7 +621,7 @@ int CvBeliefEntry::GetResourceYieldChange(int i, int j) const
 int CvBeliefEntry::GetTerrainYieldChange(int i, int j) const
 {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-    if (i==NULL && j==NULL)
+    if (i==NO_TERRAIN && j==NO_YIELD)
         return m_ppaiTerrainYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
     CvAssertMsg(i < GC.getNumTerrainInfos(), "Index out of bounds");
@@ -708,7 +708,7 @@ int CvBeliefEntry::GetPlotYieldChange(int i, int j) const
 {
 	if (MOD_API_PLOT_YIELDS) {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-        if (i==NULL && j==NULL)
+        if (i==NO_PLOT && j==NO_YIELD)
             return m_ppiPlotYieldChange ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
         CvAssertMsg(i < GC.getNumPlotInfos(), "Index out of bounds");
@@ -754,7 +754,7 @@ int CvBeliefEntry::GetYieldChangeTradeRoute(int i) const
 int CvBeliefEntry::GetYieldChangeNaturalWonder(int i) const
 {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-    if (i==NULL)
+    if (i==NO_YIELD)
         return m_piYieldChangeNaturalWonder ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
     CvAssertMsg(i < NUM_YIELD_TYPES, "Index out of bounds");
@@ -778,7 +778,7 @@ int CvBeliefEntry::GetYieldChangeWorldWonder(int i) const
 int CvBeliefEntry::GetYieldModifierNaturalWonder(int i) const
 {
 #if defined(MOD_IMPROVE_BELIEF_CODE_TO_CHECK_IF_PLOT_RELEVANT)
-    if (i==NULL)
+    if (i==NO_YIELD)
         return m_piYieldModifierNaturalWonder ? 1 : 0; // fast check if this belief does at all changes the yield this way
 #endif
     CvAssertMsg(i < NUM_YIELD_TYPES, "Index out of bounds");

@@ -16186,7 +16186,7 @@ int CvCity::getBombardRange(bool& bIndirectFireAllowed) const
             int iValue = 0;
             if (GAMEEVENTINVOKE_VALUE(iValue, GAMEEVENT_GetBombardRange, getOwner(), GetID()) == GAMEEVENTRETURN_VALUE) 
             {
-                // m_iCityBombardRange = iValue; // does not work because of cont function -.- so we wont change the value here, but use the one we got. and doTurn will change the value
+                // m_iCityBombardRange = iValue; // does not work because of const function -.- so we wont change the value here, but use the one we got. and doTurn will change the value
                 if (::abs(iValue) <= GC.getMAX_CITY_ATTACK_RANGE())
                 {
                     bIndirectFireAllowed = (iValue < 0);
@@ -16268,7 +16268,11 @@ bool CvCity::CanRangeStrikeNow() const
 
 			if(!bIndirectFireAllowed)
 			{
-				if(!pPlot->canSeePlot(pTargetPlot, eTeam, iRange, NO_DIRECTION))
+#if defined MOD_BUGFIX_NAVAL_TARGETING
+				if (!pPlot->canSeePlot(pTargetPlot, eTeam, iRange, NO_DIRECTION, DOMAIN_LAND))
+#else
+				if (!pPlot->canSeePlot(pTargetPlot, eTeam, iRange, NO_DIRECTION))
+#endif
 				{
 					bCanRangeStrike = false;
 				}
@@ -16376,7 +16380,11 @@ bool CvCity::canRangeStrikeAt(int iX, int iY) const
 	if(!GC.getCAN_CITY_USE_INDIRECT_FIRE())
 #endif
 	{
-		if(!plot()->canSeePlot(pTargetPlot, getTeam(), iAttackRange, NO_DIRECTION))
+#if defined MOD_BUGFIX_NAVAL_TARGETING
+		if (!plot()->canSeePlot(pTargetPlot, getTeam(), iAttackRange, NO_DIRECTION, DOMAIN_LAND))
+#else
+		if (!plot()->canSeePlot(pTargetPlot, getTeam(), iAttackRange, NO_DIRECTION))
+#endif
 		{
 			return false;
 		}
